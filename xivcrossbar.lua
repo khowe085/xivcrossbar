@@ -84,6 +84,7 @@ gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
 local current_arts = nil
+local current_addendum = nil
 local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
@@ -149,6 +150,14 @@ function get_crossbar_sets()
     return player:get_crossbar_names()
 end
 
+function set_edit_target(level_index)
+    player:set_edit_target(level_index)
+end
+
+function get_edit_target()
+    return player:get_edit_target()
+end
+
 function start_controller_wrappers()
 	if (settings.autohotkey == 'enabled') then
 		-- only one of these is ever needed at a time, but there's no harm in running both
@@ -181,7 +190,7 @@ function initialize()
 
     if (buttonmapping.validate()) then
         theme_options.button_layout = buttonmapping.button_layout
-        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     else
         theme_options.button_layout = 'nintendo'
         local temp_buttonmapping = {}
@@ -191,7 +200,7 @@ function initialize()
         theme_options.activewindow_button = 'x'
         gamepad_mapper:setup(buttonmapping, start_controller_wrappers, theme_options, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
         gamepad_mapper:show(true)
-        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     end
 
     player:initialize(windower_player, server, theme_options, enchanted_items)
@@ -246,11 +255,16 @@ end
 -- reload hotbar
 function reload_hotbar()
     player:load_hotbar()
-    -- load_hotbar rebuilds the static levels and drops any arts overlay; re-apply
-    -- the active overlay so in-game edits don't silently lose Light/Dark Arts.
-    -- On a job change current_arts is cleared first, so nothing is re-applied.
+    -- load_hotbar rebuilds the static levels and drops any arts/addendum overlays;
+    -- re-apply the active overlays so in-game edits don't silently lose Light/Dark Arts
+    -- or the active addendum. Arts must be re-applied before the addendum, which stacks
+    -- above it. On a job change current_arts/current_addendum are cleared first, so
+    -- nothing is re-applied.
     if current_arts then
         player:load_ability_overlay(current_arts)
+    end
+    if current_addendum then
+        player:load_ability_overlay(current_addendum)
     end
     ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
 end
@@ -970,12 +984,15 @@ end)
 local CATEGORY_JOB_ABILITY = 6
 local LIGHT_ARTS = 211
 local DARK_ARTS = 212
+local ADDENDUM_WHITE = 234
+local ADDENDUM_BLACK = 235
 
 -- ON JOB CHANGE
 windower.register_event('job change',function(main_job, main_job_level, sub_job, sub_job_level)
     skillchains.job_change(main_job, main_job_level)
     player:update_jobs(resources.jobs[main_job].ens, resources.jobs[sub_job].ens)
     current_arts = nil
+    current_addendum = nil
     player:unload_all_overlays()
     reload_hotbar()
     local default_active_environment = env_chooser:get_default_active_environment(player.hotbar)
@@ -990,18 +1007,42 @@ windower.register_event('action', function(act)
     end
 
     if (act.category == CATEGORY_JOB_ABILITY and act.param == LIGHT_ARTS) then
+        -- switching arts invalidates any active addendum, so unload it first
+        if (current_addendum ~= nil) then
+            player:unload_ability_overlay(current_addendum)
+        end
         if (current_arts ~= nil) then
             player:unload_ability_overlay(current_arts)
         end
-        player:load_ability_overlay('lightarts')
-        current_arts = 'lightarts'
+        current_addendum = nil
+        player:load_ability_overlay('LA')
+        current_arts = 'LA'
         ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
     elseif (act.category == CATEGORY_JOB_ABILITY and act.param == DARK_ARTS) then
+        -- switching arts invalidates any active addendum, so unload it first
+        if (current_addendum ~= nil) then
+            player:unload_ability_overlay(current_addendum)
+        end
         if (current_arts ~= nil) then
             player:unload_ability_overlay(current_arts)
         end
-        player:load_ability_overlay('darkarts')
-        current_arts = 'darkarts'
+        current_addendum = nil
+        player:load_ability_overlay('DA')
+        current_arts = 'DA'
+        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == ADDENDUM_WHITE) then
+        if (current_addendum ~= nil) then
+            player:unload_ability_overlay(current_addendum)
+        end
+        player:load_ability_overlay('LA-AW')
+        current_addendum = 'LA-AW'
+        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == ADDENDUM_BLACK) then
+        if (current_addendum ~= nil) then
+            player:unload_ability_overlay(current_addendum)
+        end
+        player:load_ability_overlay('DA-AB')
+        current_addendum = 'DA-AB'
         ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
     end
 end)

@@ -46,7 +46,7 @@ function storage:setup(player)
     self:update_filename(player.main_job, player.sub_job)
 end
 
--- get a handle to an ability overlay file: e.g. SCH-NOSUB-lightarts.xml
+-- get a handle to an ability overlay file: e.g. SCH-NOSUB-LA.xml
 function storage:get_ability_file(name)
     return file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '-' .. name .. '.xml')
 end

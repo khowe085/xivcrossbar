@@ -56,6 +56,11 @@ player.hotbar_levels = {}
 -- levels are flushed to disk by save_hotbar
 player.dirty_levels = {}
 
+-- in-game edit target: selector ID 1-7. 1-3 = static levels (all-jobs, job-default,
+-- job-sub); 4-7 = ability overlays resolved by edit_target_overlay_name
+player.edit_target_level        = 2
+player.edit_target_overlay_name = nil
+
 player.hotbar_settings = {}
 player.hotbar_settings.max = 1
 player.hotbar_settings.active_hotbar = 1
@@ -384,6 +389,9 @@ function player:reset_hotbar()
         { name = 'job-sub', file = nil, data = { hotbar = {} } }
     }
 
+    self.edit_target_level        = 2
+    self.edit_target_overlay_name = nil
+
     self.hotbar_settings.active_hotbar = 1
 end
 
@@ -437,16 +445,61 @@ function player:get_crossbar_names()
     return names
 end
 
--- resolve which level an add/modify edit should write to: in-game edits always land
--- in the job-default level (2). ALL-JOBS-DEFAULT (1) is never an in-game write target.
-function player:resolve_edit_level(environment, hotbar, slot)
-    return 2
+-- map a selector ID (1-7) to the in-game edit target. 1-3 are static levels; 4-7 are
+-- ability overlays, stored by name so resolve_* can find/create them at edit time.
+function player:set_edit_target(id)
+    local names = { [4] = 'LA', [5] = 'DA', [6] = 'LA-AW', [7] = 'DA-AB' }
+    self.edit_target_level        = id
+    self.edit_target_overlay_name = names[id]
 end
 
--- resolve which level a delete should remove from: in-game edits always land in the
--- job-default level (2). ALL-JOBS-DEFAULT (1) is never an in-game write target.
+-- return the current edit target selector ID (1-7)
+function player:get_edit_target()
+    return self.edit_target_level
+end
+
+-- find an ability overlay level by name; load it from file if not in memory, and if
+-- the file does not exist yet create an empty in-memory level (the first edit then
+-- creates the XML on save). Returns the overlay's index in hotbar_levels.
+function player:ensure_ability_overlay(name)
+    for i = 4, #self.hotbar_levels do
+        if self.hotbar_levels[i].name == name then
+            return i
+        end
+    end
+
+    -- not loaded: try loading from file first
+    self:load_ability_overlay(name)
+    for i = 4, #self.hotbar_levels do
+        if self.hotbar_levels[i].name == name then
+            return i
+        end
+    end
+
+    -- file doesn't exist yet: create an empty in-memory overlay level;
+    -- save_hotbar will create the file on the next edit
+    local level = { name = name, file = storage:get_ability_file(name), data = { hotbar = {} } }
+    self.hotbar_levels[#self.hotbar_levels + 1] = level
+    self:merge_levels()
+    return #self.hotbar_levels
+end
+
+-- resolve which level an add/modify edit should write to. Static targets (1-3) map
+-- directly; overlay targets (4-7) find or create the overlay by name.
+function player:resolve_edit_level(environment, hotbar, slot)
+    if self.edit_target_level <= 3 then
+        return self.edit_target_level
+    end
+    return self:ensure_ability_overlay(self.edit_target_overlay_name)
+end
+
+-- resolve which level a delete should remove from. Static targets (1-3) map directly;
+-- overlay targets (4-7) find or create the overlay by name.
 function player:resolve_delete_level(environment, hotbar, slot)
-    return 2
+    if self.edit_target_level <= 3 then
+        return self.edit_target_level
+    end
+    return self:ensure_ability_overlay(self.edit_target_overlay_name)
 end
 
 -- add given action to the job-default level (2), record that level as dirty,
@@ -708,7 +761,7 @@ function player:set_action_icon(environment, hotbar, slot, icon)
     self:merge_levels()
 end
 
--- create a new environment in the job-default level (the in-game edit floor)
+-- create a new environment in the currently selected edit target level
 function player:create_new_environment(name)
     if (name ~= nil) then
         local new_environment = {}
@@ -720,8 +773,9 @@ function player:create_new_environment(name)
             end
         end
 
-        self.hotbar_levels[2].data.hotbar[kebab_casify(name)] = new_environment
-        self.dirty_levels[2] = true
+        local idx = self:resolve_edit_level(nil, nil, nil)
+        self.hotbar_levels[idx].data.hotbar[kebab_casify(name)] = new_environment
+        self.dirty_levels[idx] = true
         self:merge_levels()
     else
         print('XIVCROSSBAR: Attempted to create crossbar set with no name. Unable to create.')

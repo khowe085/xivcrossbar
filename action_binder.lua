@@ -51,7 +51,8 @@ local states = {
     ['SELECT_PLAYER_BINDING'] = 4,
     ['SELECT_BUTTON_ASSIGNMENT'] = 5,
     ['CONFIRM_BUTTON_ASSIGNMENT'] = 6,
-    ['SHOW_CREDITS'] = 7
+    ['SHOW_CREDITS'] = 7,
+    ['SELECT_EDIT_FILE'] = 8
 }
 
 local action_types = {
@@ -88,7 +89,8 @@ local action_types = {
     ['SWITCH_TARGET'] = 30,
     ['SWITCH_CROSSBARS'] = 31,
     ['MOVE_CROSSBARS'] = 32,
-    ['SHOW_CREDITS'] = 33
+    ['SHOW_CREDITS'] = 33,
+    ['SELECT_EDIT_FILE'] = 34
 }
 
 local prefix_lookup = {
@@ -146,7 +148,7 @@ local SPELL_TYPE_LOOKUP = {
     ['SummonerPact'] = 'summoning magic',
 }
 
-function action_binder:setup(buttonmapping, save_binding_func, delete_binding_func, theme_options, get_crossbar_sets_func, base_x, base_y, max_width, max_height)
+function action_binder:setup(buttonmapping, save_binding_func, delete_binding_func, theme_options, get_crossbar_sets_func, set_edit_target_func, get_edit_target_func, base_x, base_y, max_width, max_height)
     self.button_layout = buttonmapping.button_layout
     self.confirm_button = buttonmapping.confirm_button
     self.cancel_button = buttonmapping.cancel_button
@@ -155,6 +157,8 @@ function action_binder:setup(buttonmapping, save_binding_func, delete_binding_fu
     self.save_binding = save_binding_func
     self.delete_binding = delete_binding_func
     self.get_crossbar_sets_binding = get_crossbar_sets_func
+    self.set_edit_target_binding = set_edit_target_func
+    self.get_edit_target_binding = get_edit_target_func
     self.is_hidden = true
     self.selector = require('ui/selectablelist')
     self.selector:setup(theme_options, base_x + 50, base_y + 75, max_width - 100, max_height - 175)
@@ -554,6 +558,9 @@ function action_binder:submit_selected_option()
         elseif (self.action_type == action_types.MOVE_CROSSBARS) then
             self.state = states.MOVE_CROSSBARS
             self:display_crossbar_mover()
+        elseif (self.action_type == action_types.SELECT_EDIT_FILE) then
+            self.state = states.SELECT_EDIT_FILE
+            self:display_edit_file_selector()
         elseif (self.action_type == action_types.DELETE) then
             self.state = states.SELECT_BUTTON_ASSIGNMENT
             self:display_button_assigner()
@@ -588,6 +595,15 @@ function action_binder:submit_selected_option()
             self:display_action_selector()
         end
     elseif (self.state == states.MOVE_CROSSBARS or self.state == states.SHOW_CREDITS) then
+        self.state = states.SELECT_ACTION_TYPE
+        self.action_type = nil
+        self.selector:set_page(self.selection_states[states.SELECT_ACTION_TYPE].page)
+        self:display_action_type_selector()
+        self.selector:import_selection_state(self.selection_states[states.SELECT_ACTION_TYPE])
+        self.selection_states[states.SELECT_ACTION_TYPE] = nil
+    elseif (self.state == states.SELECT_EDIT_FILE) then
+        local option = self.selector:submit_selected_option()
+        self.set_edit_target_binding(option.id)
         self.state = states.SELECT_ACTION_TYPE
         self.action_type = nil
         self.selector:set_page(self.selection_states[states.SELECT_ACTION_TYPE].page)
@@ -665,6 +681,13 @@ function action_binder:go_back()
         self.selector:import_selection_state(self.selection_states[states.SELECT_ACTION_TYPE])
         self.selection_states[states.SELECT_ACTION_TYPE] = nil
     elseif (self.state == states.MOVE_CROSSBARS) then
+        self.state = states.SELECT_ACTION_TYPE
+        self.action_type = nil
+        self.selector:set_page(self.selection_states[states.SELECT_ACTION_TYPE].page)
+        self:display_action_type_selector()
+        self.selector:import_selection_state(self.selection_states[states.SELECT_ACTION_TYPE])
+        self.selection_states[states.SELECT_ACTION_TYPE] = nil
+    elseif (self.state == states.SELECT_EDIT_FILE) then
         self.state = states.SELECT_ACTION_TYPE
         self.action_type = nil
         self.selector:set_page(self.selection_states[states.SELECT_ACTION_TYPE].page)
@@ -825,10 +848,32 @@ function action_binder:display_action_type_selector()
     action_type_list:append({id = action_types.LAST_SYNTH, name = 'Repeat Last Synth', icon = 'images/' ..get_icon_pathbase() .. '/synth.png'})
     action_type_list:append({id = action_types.SWITCH_CROSSBARS, name = 'Switch Crossbars', icon = 'images/' ..get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout .. '.png'})
     action_type_list:append({id = action_types.MOVE_CROSSBARS, name = 'Move Crossbar', icon = 'images/' ..get_icon_pathbase() .. '/ui/dpad_' .. self.button_layout .. '.png'})
+    action_type_list:append({id = action_types.SELECT_EDIT_FILE, name = 'Select Edit Target', icon = 'images/' ..get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout .. '.png'})
     action_type_list:append({id = action_types.SHOW_CREDITS, name = 'XIVCrossbar Credits', icon = 'images/credit_avatars/xiv.png'})
     self.selector:display_options(action_type_list)
 
     self:show_control_hints('Confirm', 'Exit')
+end
+
+function action_binder:display_edit_file_selector()
+    self.title:text('Select Edit Target File')
+    self.title:show()
+
+    local current = self.get_edit_target_binding()
+    local icon_path = get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout
+
+    local options = L{
+        {id = 1, name = 'All Jobs Default' ..   (current == 1 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 2, name = 'Job Default' ..         (current == 2 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 3, name = 'Job + Sub Default' ..   (current == 3 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 4, name = 'Light Arts' ..          (current == 4 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 5, name = 'Dark Arts' ..           (current == 5 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 6, name = 'Addendum: White' ..     (current == 6 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 7, name = 'Addendum: Black' ..     (current == 7 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+    }
+
+    self.selector:display_options(options)
+    self:show_control_hints('Confirm', 'Go Back')
 end
 
 function action_binder:display_action_selector()
