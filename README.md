@@ -31,11 +31,13 @@ Hotbar File Hierarchy & Light/Dark Arts Overlays:
 
         You can also make optional overlay files named {MAINJOB}-{SUBJOB}-lightarts.xml and {MAINJOB}-{SUBJOB}-darkarts.xml (e.g. RDM-SCH-lightarts.xml). When you activate Light Arts or Dark Arts in-game - by any means, gamepad, hotbar, or the /ja command - the matching overlay file gets layered on top of your current sets and merges slot-by-slot just like the others. Switching arts swaps the overlay; changing job or subjob clears it. If the overlay file doesn't exist, nothing happens - it's entirely optional and safe to omit. Only Light Arts and Dark Arts are supported as overlays.
 
-    In-game editing lands in the most-specific file that defines the slot:
+    In-game editing lands in the JOB-DEFAULT file:
 
-        Loading is strictly read-only: switching characters, logging in, or changing job never writes any hotbar files. When a file is missing, an empty default set is still built in memory so it shows up in the editor - it just isn't written to disk until you actually edit it.
+        Every edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is written to {MAINJOB}-DEFAULT.xml - the job-default file. That file is created automatically the first time you log in on a job that doesn't have one yet, so it always exists for you to build on.
 
-        Any edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is routed to the most-specific file that already defines that slot, and only the file it actually touches gets written. The default target is {MAINJOB}-DEFAULT.xml: a fresh edit, or an edit to a slot that nothing else defines, lands there. If the slot is already defined in {MAINJOB}-{SUBJOB}.xml or in an active Light/Dark Arts overlay file, the edit lands in that file instead, so it takes effect right where you see it. ALL-JOBS-DEFAULT.xml is never written from in-game; a slot that exists only there gets a job-level override written into {MAINJOB}-DEFAULT.xml. Deleting removes the most-specific copy of the slot, so any lower-tier copy simply reappears on the next merge - a slot that exists only in ALL-JOBS-DEFAULT.xml can't be deleted in-game and must be removed by hand. Those broader files, and the Light/Dark Arts overlays, can still be hand-edited in a text editor whenever you like.
+        ALL-JOBS-DEFAULT.xml, the {MAINJOB}-{SUBJOB}.xml files, and the Light/Dark Arts overlays are meant to be made and edited by hand in a text editor - the in-game editor never writes them. When one of those is missing, a default set is still built in memory so it shows up in the editor; it just isn't written to disk.
+
+        One thing to keep in mind: because in-game edits always land in the job-default file - which sits below the job/subjob file and the arts overlays in priority - if you hand-define the same slot in {MAINJOB}-{SUBJOB}.xml or in a Light/Dark Arts file, that higher-priority file wins in the merged view and your in-game edit to that slot won't show. Edit it in the file that defines it. Likewise, deleting a slot in-game only clears the job-default copy; a copy defined in a broader hand-made file reappears on the next merge.
 
 Controller changes:
 

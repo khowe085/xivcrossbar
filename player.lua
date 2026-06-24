@@ -163,6 +163,7 @@ function player:load_hotbar()
         self:load_level_from_file(2, storage.job_default_file)
     elseif self.auto_create_xml then
         self:create_job_default_hotbar()
+        storage:save_level(self.hotbar_levels[2].data, storage.job_default_file)
     end
 
     -- if normal hotbar file exists, load it. If not, build a default hotbar in memory
@@ -251,17 +252,6 @@ end
 
 function kebab_casify(str)
     return str:lower():gsub(' ', '-'):gsub('\'', '')
-end
-
--- true if a level's data defines a real action (not an empty/placeholder slot) at
--- the given environment key / hotbar number / slot number
-local function level_defines_slot(level, env_key, hotbar, slot)
-    local hotbars = level.data.hotbar[env_key]
-    if hotbars == nil then return false end
-    local slots = hotbars['hotbar_' .. hotbar]
-    if slots == nil then return false end
-    local action = slots['slot_' .. slot]
-    return action ~= nil and action.action ~= nil
 end
 
 -- shallow copy of a flat action field table (built by action_manager:build), so a
@@ -447,40 +437,20 @@ function player:get_crossbar_names()
     return names
 end
 
--- resolve which level an add/modify edit should write to: the most-specific level
--- (job-sub or an active arts overlay) that already defines the slot, otherwise the
--- job-default floor (2). ALL-JOBS-DEFAULT (1) is never an in-game write target.
+-- resolve which level an add/modify edit should write to: in-game edits always land
+-- in the job-default level (2). ALL-JOBS-DEFAULT (1) is never an in-game write target.
 function player:resolve_edit_level(environment, hotbar, slot)
-    if environment == 'b' then environment = 'battle' elseif environment == 'f' then environment = 'field' end
-    if slot == 10 then slot = 0 end
-    local env_key = kebab_casify(environment)
-
-    for i = #self.hotbar_levels, 3, -1 do
-        if level_defines_slot(self.hotbar_levels[i], env_key, hotbar, slot) then
-            return i
-        end
-    end
     return 2
 end
 
--- resolve which level a delete should remove from: the most-specific writable level
--- (job-default up through active arts overlays) that defines the slot, or nil when
--- the slot only exists in the hand-edited ALL-JOBS-DEFAULT level (1).
+-- resolve which level a delete should remove from: in-game edits always land in the
+-- job-default level (2). ALL-JOBS-DEFAULT (1) is never an in-game write target.
 function player:resolve_delete_level(environment, hotbar, slot)
-    if environment == 'b' then environment = 'battle' elseif environment == 'f' then environment = 'field' end
-    if slot == 10 then slot = 0 end
-    local env_key = kebab_casify(environment)
-
-    for i = #self.hotbar_levels, 2, -1 do
-        if level_defines_slot(self.hotbar_levels[i], env_key, hotbar, slot) then
-            return i
-        end
-    end
-    return nil
+    return 2
 end
 
--- add given action to the most-specific defining level (job-default floor by
--- default), record that level as dirty, then refresh the merged view.
+-- add given action to the job-default level (2), record that level as dirty,
+-- then refresh the merged view.
 function player:add_action(action, environment, hotbar, slot)
     local idx = self:resolve_edit_level(environment, hotbar, slot)
     self:add_action_to(self.hotbar_levels[idx].data.hotbar, action, environment, hotbar, slot)
@@ -618,18 +588,14 @@ function player:execute_action(slot)
     windower.send_command('input /' .. action.type .. ' "' .. action.action .. target_string)
 end
 
--- remove the action from its most-specific writable level (job-default up through
--- active arts overlays); a lower-tier copy then shows through. A slot that only
--- exists in ALL-JOBS-DEFAULT is a no-op: that file is hand-edited.
+-- remove the action from the job-default level (2); a lower-tier (ALL-JOBS-DEFAULT)
+-- copy then shows through, and higher hand-made levels (job-sub / arts overlays)
+-- still shadow it in the merged view.
 function player:remove_action(environment, hotbar, slot)
     if environment == 'b' then environment = 'battle' elseif environment == 'f' then environment = 'field' end
     if slot == 10 then slot = 0 end
 
     local idx = self:resolve_delete_level(environment, hotbar, slot)
-    if idx == nil then
-        windower.console.write('[XIVCrossbar] Action is only defined in ALL-JOBS-DEFAULT.xml; edit that file by hand to remove it.')
-        return
-    end
 
     local env_key = kebab_casify(environment)
     local target_hotbar = self.hotbar_levels[idx].data.hotbar
@@ -642,8 +608,8 @@ function player:remove_action(environment, hotbar, slot)
 end
 
 -- copy (or move) an action from one slot to another. The source is read from the
--- merged view; the destination lands in its most-specific defining level (job-default
--- floor by default). A move also clears the source's most-specific writable copy.
+-- merged view; the destination lands in the job-default level (2). A move also clears
+-- the job-default copy of the source.
 function player:copy_action(environment, hotbar, slot, to_environment, to_hotbar, to_slot, is_moving)
     if environment == 'b' then environment = 'battle' elseif environment == 'f' then environment = 'field' end
     if to_environment == 'b' then to_environment = 'battle' elseif to_environment == 'f' then to_environment = 'field' end
@@ -673,12 +639,10 @@ function player:copy_action(environment, hotbar, slot, to_environment, to_hotbar
 
     if is_moving then
         local src_idx = self:resolve_delete_level(environment, hotbar, slot)
-        if src_idx ~= nil then
-            local source = self.hotbar_levels[src_idx].data.hotbar
-            if source[src_env_key] ~= nil and source[src_env_key]['hotbar_' .. hotbar] ~= nil then
-                source[src_env_key]['hotbar_' .. hotbar]['slot_' .. slot] = nil
-                self.dirty_levels[src_idx] = true
-            end
+        local source = self.hotbar_levels[src_idx].data.hotbar
+        if source[src_env_key] ~= nil and source[src_env_key]['hotbar_' .. hotbar] ~= nil then
+            source[src_env_key]['hotbar_' .. hotbar]['slot_' .. slot] = nil
+            self.dirty_levels[src_idx] = true
         end
     end
 
