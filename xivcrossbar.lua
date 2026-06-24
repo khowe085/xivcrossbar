@@ -83,6 +83,7 @@ gamepad_state.right_trigger_doublepress = false
 gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
+local current_arts = nil
 local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
@@ -245,6 +246,12 @@ end
 -- reload hotbar
 function reload_hotbar()
     player:load_hotbar()
+    -- load_hotbar rebuilds the static levels and drops any arts overlay; re-apply
+    -- the active overlay so in-game edits don't silently lose Light/Dark Arts.
+    -- On a job change current_arts is cleared first, so nothing is re-applied.
+    if current_arts then
+        player:load_ability_overlay(current_arts)
+    end
     ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
 end
 
@@ -960,60 +967,42 @@ windower.register_event('status change', function(new_status_id)
     end
 end)
 
+local CATEGORY_JOB_ABILITY = 6
+local LIGHT_ARTS = 211
+local DARK_ARTS = 212
+
 -- ON JOB CHANGE
 windower.register_event('job change',function(main_job, main_job_level, sub_job, sub_job_level)
     skillchains.job_change(main_job, main_job_level)
     player:update_jobs(resources.jobs[main_job].ens, resources.jobs[sub_job].ens)
+    current_arts = nil
+    player:unload_all_overlays()
     local default_active_environment = env_chooser:get_default_active_environment(player.hotbar)
     player:set_active_environment(default_active_environment)
     reload_hotbar()
 end)
 
-local CATEGORY_COMPLETED_SPELL = 4
-local CATEGORY_JOB_ABILITY = 6
-local SUMMONING_MAGIC = 38
-local RELEASE = 90
-local LIGHT_ARTS = 211
-local DARK_ARTS = 212
-local ADDENDUM_WHITE = 234
-local ADDENDUM_BLACK = 235
-
-local no_pet_environment = nil
-
 windower.register_event('action', function(act)
-    -- Don't swap crossbars when someone *else* summons or uses Light/Dark Arts
+    -- Don't swap crossbars when someone *else* uses Light/Dark Arts
     local windower_player = windower.ffxi.get_player()
     if (act.actor_id ~= windower_player.id) then
         return
     end
 
-    if (act.category == CATEGORY_COMPLETED_SPELL) then
-        local spell = resources.spells[act.param]
-        if (spell ~= nil and spell.skill == SUMMONING_MAGIC and is_valid_environment(spell.en:gsub(' ', ''):lower())) then
-            no_pet_environment = player.hotbar_settings.active_environment
-            set_active_environment(spell.en:gsub(' ', ''):lower())
+    if (act.category == CATEGORY_JOB_ABILITY and act.param == LIGHT_ARTS) then
+        if (current_arts ~= nil) then
+            player:unload_ability_overlay(current_arts)
         end
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == RELEASE) then
-        if (no_pet_environment ~= nil and is_valid_environment(no_pet_environment)) then
-            set_active_environment(no_pet_environment)
-            no_pet_environment = nil
-        end
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == LIGHT_ARTS) then
-        if (is_valid_environment('lightarts')) then
-            set_active_environment('lightarts')
-        end
+        player:load_ability_overlay('lightarts')
+        current_arts = 'lightarts'
+        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
     elseif (act.category == CATEGORY_JOB_ABILITY and act.param == DARK_ARTS) then
-        if (is_valid_environment('darkarts')) then
-            set_active_environment('darkarts')
+        if (current_arts ~= nil) then
+            player:unload_ability_overlay(current_arts)
         end
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == ADDENDUM_WHITE) then
-        if (is_valid_environment('addendumwhite')) then
-            set_active_environment('addendumwhite')
-        end
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == ADDENDUM_BLACK) then
-        if (is_valid_environment('addendumblack')) then
-            set_active_environment('addendumblack')
-        end
+        player:load_ability_overlay('darkarts')
+        current_arts = 'darkarts'
+        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
     end
 end)
 

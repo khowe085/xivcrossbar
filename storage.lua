@@ -46,41 +46,23 @@ function storage:setup(player)
     self.all_jobs_file = file.new('data/hotbar/' .. self.directory .. '/ALL-JOBS-DEFAULT.xml')
 end
 
-function split_hotbar(hotbar_to_split)
-    -- For the "normal" hotbar file: e.g. DRG-SAM.xml
-    local job_sub_hotbar = {}
-    job_sub_hotbar.hotbar = {}
+-- get a handle to an ability overlay file: e.g. SCH-NOSUB-lightarts.xml
+function storage:get_ability_file(name)
+    return file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '-' .. name .. '.xml')
+end
 
-    -- For the "job" hotbar file: e.g. DRG-DEFAULT.xml
-    local job_hotbar = {}
-    job_hotbar.hotbar = {}
-
-    -- For the "character" hotbar file: e.g. ALL-JOBS-DEFAULT.xml
-    local all_jobs_hotbar = {}
-    all_jobs_hotbar.hotbar = {}
-
-    for environment, hb in pairs(hotbar_to_split.hotbar) do
-        if (string.sub(environment, 1, 4) == 'all-') then
-            all_jobs_hotbar.hotbar[environment] = hb
-        elseif (string.sub(environment, 1, 4) == 'job-') then
-            job_hotbar.hotbar[environment] = hb
-        else
-            job_sub_hotbar.hotbar[environment] = hb
-        end
-    end
-
-    return job_sub_hotbar, job_hotbar, all_jobs_hotbar
+-- write a single level's environments to its file
+function storage:save_level(level_data, target_file)
+    target_file:write(table.to_xml(level_data))
 end
 
 -- store an hotbar in a new file
-function storage:store_new_hotbar(new_hotbar)
+function storage:store_new_hotbar(job_sub_data, job_default_data, all_jobs_data)
     self.file:create()
 
-    local job_sub_hotbar, job_hotbar, all_jobs_hotbar = split_hotbar(new_hotbar)
-
-    self.file:write(table.to_xml(job_sub_hotbar))
-    self.job_default_file:write(table.to_xml(job_hotbar))
-    self.all_jobs_file:write(table.to_xml(all_jobs_hotbar))
+    self.file:write(table.to_xml(job_sub_data))
+    self.job_default_file:write(table.to_xml(job_default_data))
+    self.all_jobs_file:write(table.to_xml(all_jobs_data))
 end
 
 -- update filename according to jobs
@@ -89,20 +71,6 @@ function storage:update_filename(main, sub)
     self.file = file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '.xml')
     self.job_default_file = file.new('data/hotbar/' .. self.directory .. '/' .. main .. '-DEFAULT.xml')
     self.all_jobs_file = file.new('data/hotbar/' .. self.directory .. '/ALL-JOBS-DEFAULT.xml')
-end
-
--- update file with hotbar
-function storage:save_hotbar(new_hotbar)
-    if not self.file:exists() then
-        error('Hotbar file could not be found!')
-        return
-    end
-
-    local job_sub_hotbar, job_hotbar, all_jobs_hotbar = split_hotbar(new_hotbar)
-
-    self.file:write(table.to_xml(job_sub_hotbar))
-    self.job_default_file:write(table.to_xml(job_hotbar))
-    self.all_jobs_file:write(table.to_xml(all_jobs_hotbar))
 end
 
 return storage
