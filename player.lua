@@ -156,24 +156,22 @@ function player:load_hotbar()
 
     -- if all jobs file exists, load it. If not, build a default version in memory
     if storage.all_jobs_file:exists() then
-        windower.console.write('[XIVCrossbar] Load cross-job fallback crossbar set')
         self:load_level_from_file(1, storage.all_jobs_file)
     elseif self.auto_create_xml then
         self:create_all_jobs_default_hotbar()
     end
 
-    -- if job default file exists, load it. If not, build a default version in memory
+    -- if job default file exists, load it. If not, build a default version in memory.
+    -- The in-memory default is written to disk only on the first in-game edit (via the
+    -- dirty_levels mechanism), the same as the all-jobs and job-sub levels.
     if storage.job_default_file:exists() then
-        windower.console.write('[XIVCrossbar] Load cross-subjob fallback crossbar set for ' .. player.main_job)
         self:load_level_from_file(2, storage.job_default_file)
     elseif self.auto_create_xml then
         self:create_job_default_hotbar()
-        storage:save_level(self.hotbar_levels[2].data, storage.job_default_file)
     end
 
     -- if normal hotbar file exists, load it. If not, build a default hotbar in memory
     if storage.file:exists() then
-        windower.console.write('[XIVCrossbar] Load crossbar sets for ' .. storage.filename)
         self:load_level_from_file(3, storage.file)
     elseif self.auto_create_xml then
         self:create_default_hotbar()
@@ -343,8 +341,6 @@ end
 
 -- create a default hotbar in the job-sub level
 function player:create_default_hotbar()
-    windower.console.write('[XIVCrossbar] No ' .. storage.filename .. '.xml found; using an in-memory default (create the file by hand to customize)')
-
     local target_hotbar = self.hotbar_levels[3].data.hotbar
 
     target_hotbar.default = {}
@@ -358,8 +354,6 @@ end
 
 -- create a fallback hotbar that applies to all subjobs of this job
 function player:create_job_default_hotbar()
-    windower.console.write('[XIVCrossbar] No ' .. self.main_job .. '-DEFAULT.xml found; creating it')
-
     local target_hotbar = self.hotbar_levels[2].data.hotbar
 
     target_hotbar['job-default'] = {}
@@ -369,8 +363,6 @@ end
 
 -- create a fallback hotbar that applies to all jobs on this character
 function player:create_all_jobs_default_hotbar()
-    windower.console.write('[XIVCrossbar] No ALL-JOBS-DEFAULT.xml found; using an in-memory default (create the file by hand to customize)')
-
     local target_hotbar = self.hotbar_levels[1].data.hotbar
 
     target_hotbar['all-jobs-default'] = {}

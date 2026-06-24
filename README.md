@@ -35,7 +35,7 @@ Hotbar File Hierarchy & Light/Dark Arts Overlays:
 
     In-game editing and the edit target:
 
-        By default, every edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is written to {MAINJOB}-DEFAULT.xml - the job-default file. That file is created automatically the first time you log in on a job that doesn't have one yet, so it always exists for you to build on.
+        By default, every edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is written to {MAINJOB}-DEFAULT.xml - the job-default file. If that file doesn't exist yet, it is created on your first edit - nothing is written to disk just from loading the addon or logging in.
 
         You can change where edits land with the "Select Edit Target" option in the action binder menu (the same menu you use to assign actions). It lets you point your edits at any layer: All Jobs Default, Job Default, Job + Sub Default, the Light/Dark Arts overlays, or the Addendum: White/Black overlays. If the target file doesn't exist yet, it is created on your first edit there. The selected target resets back to Job Default on reload and on every job change.
 
