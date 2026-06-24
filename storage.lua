@@ -59,15 +59,6 @@ function storage:save_level(level_data, target_file)
     target_file:write(table.to_xml(level_data))
 end
 
--- create a level's file only if it does not already exist; never overwrites
-function storage:create_level_if_missing(level_data, target_file)
-    if target_file:exists() then
-        return
-    end
-    target_file:create()
-    target_file:write(table.to_xml(level_data))
-end
-
 -- update filename according to jobs
 function storage:update_filename(main, sub)
     self.filename = main .. '-' .. normalize_sub(sub)
