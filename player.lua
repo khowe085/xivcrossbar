@@ -138,40 +138,32 @@ end
 function player:load_hotbar()
     self:update_current_spells()
     self:reset_hotbar()
-    local newly_created = false
 
-    -- if all jobs file exists, load it. If not, create a default version
+    -- if all jobs file exists, load it. If not, build a default version in memory
     if storage.all_jobs_file:exists() then
         windower.console.write('[XIVCrossbar] Load cross-job fallback crossbar set')
         self:load_level_from_file(1, storage.all_jobs_file)
     elseif self.auto_create_xml then
-        newly_created = true
         self:create_all_jobs_default_hotbar()
     end
 
-    -- if job default file exists, load it. If not, create a default version
+    -- if job default file exists, load it. If not, build a default version in memory
     if storage.job_default_file:exists() then
         windower.console.write('[XIVCrossbar] Load cross-subjob fallback crossbar set for ' .. player.main_job)
         self:load_level_from_file(2, storage.job_default_file)
     elseif self.auto_create_xml then
-        newly_created = true
         self:create_job_default_hotbar()
     end
 
-    -- if normal hotbar file exists, load it. If not, create a default hotbar
+    -- if normal hotbar file exists, load it. If not, build a default hotbar in memory
     if storage.file:exists() then
         windower.console.write('[XIVCrossbar] Load crossbar sets for ' .. storage.filename)
         self:load_level_from_file(3, storage.file)
     elseif self.auto_create_xml then
-        newly_created = true
         self:create_default_hotbar()
     end
 
     self:merge_levels()
-
-    if (newly_created) then
-        player:store_new_hotbars()
-    end
 end
 
 -- read the three static XML files into hotbar_levels and rebuild player.hotbar
@@ -358,14 +350,6 @@ function player:create_all_jobs_default_hotbar()
     target_hotbar['all-jobs-default'] = {}
     target_hotbar['all-jobs-default']['name'] = 'All Jobs Default'
     self:setup_environment_hotbars(target_hotbar, 'all-jobs-default')
-end
-
-function player:store_new_hotbars()
-    storage:store_new_hotbar(
-        self.hotbar_levels[3].data,
-        self.hotbar_levels[2].data,
-        self.hotbar_levels[1].data
-    )
 end
 
 -- reset player hotbar
@@ -648,10 +632,13 @@ function player:create_new_environment(name)
 end
 
 -- save current hotbar. In-game edits only ever modify the job-sub level
--- (hotbar_levels[3]); the broader all-jobs / job-default files are hand-edited,
--- so we must not rewrite (and thereby strip comments/formatting from) them here.
+-- (hotbar_levels[3]); persist that. The broader all-jobs / job-default files
+-- are hand-edited, so we only create them when absent (giving the user a file
+-- to edit) and never overwrite an existing one.
 function player:save_hotbar()
     storage:save_level(self.hotbar_levels[3].data, storage.file)
+    storage:create_level_if_missing(self.hotbar_levels[1].data, storage.all_jobs_file)
+    storage:create_level_if_missing(self.hotbar_levels[2].data, storage.job_default_file)
 end
 
 return player

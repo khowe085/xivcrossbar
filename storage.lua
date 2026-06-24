@@ -51,18 +51,21 @@ function storage:get_ability_file(name)
     return file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '-' .. name .. '.xml')
 end
 
--- write a single level's environments to its file
+-- write a single level's environments to its file, creating the file/dir if needed
 function storage:save_level(level_data, target_file)
+    if not target_file:exists() then
+        target_file:create()
+    end
     target_file:write(table.to_xml(level_data))
 end
 
--- store an hotbar in a new file
-function storage:store_new_hotbar(job_sub_data, job_default_data, all_jobs_data)
-    self.file:create()
-
-    self.file:write(table.to_xml(job_sub_data))
-    self.job_default_file:write(table.to_xml(job_default_data))
-    self.all_jobs_file:write(table.to_xml(all_jobs_data))
+-- create a level's file only if it does not already exist; never overwrites
+function storage:create_level_if_missing(level_data, target_file)
+    if target_file:exists() then
+        return
+    end
+    target_file:create()
+    target_file:write(table.to_xml(level_data))
 end
 
 -- update filename according to jobs

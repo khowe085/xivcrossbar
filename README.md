@@ -35,7 +35,9 @@ Hotbar File Hierarchy & Light/Dark Arts Overlays:
 
     In-game editing lands in the job/subjob file:
 
-        Any edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is saved to the {MAINJOB}-{SUBJOB}.xml file. The broader ALL-JOBS-DEFAULT.xml and {MAINJOB}-DEFAULT.xml files, and the Light/Dark Arts overlays, are meant to be hand-edited in a text editor. One thing to watch out for: because in-game deletes only touch the job/subjob file, you can't delete an action through the editor if it was defined in a lower-priority file (ALL-JOBS-DEFAULT.xml or {MAINJOB}-DEFAULT.xml) - it'll just come back from the lower file on the next merge. To get rid of it, edit the file that actually defines it.
+        Loading is strictly read-only: switching characters, logging in, or changing job never writes any hotbar files. When a file is missing, an empty default set is still built in memory so it shows up in the editor - it just isn't written to disk until you actually edit it.
+
+        Any edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) only ever modifies the {MAINJOB}-{SUBJOB}.xml file. On that first in-game edit, the broader ALL-JOBS-DEFAULT.xml and {MAINJOB}-DEFAULT.xml files are auto-created as empty files if they don't already exist, giving you something to hand-edit; if they already exist they are never overwritten by the addon. Those broader files, and the Light/Dark Arts overlays, are meant to be hand-edited in a text editor. One thing to watch out for: because in-game deletes only touch the job/subjob file, you can't delete an action through the editor if it was defined in a lower-priority file (ALL-JOBS-DEFAULT.xml or {MAINJOB}-DEFAULT.xml) - it'll just come back from the lower file on the next merge. To get rid of it, edit the file that actually defines it.
 
 Controller changes:
 
