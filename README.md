@@ -17,6 +17,28 @@ Additions:
 
     Added Alternate Layout (UseAltLayout) that mimics FFXIV's alt layout, where the left side will always be dpad and right side will be face buttons. Note: This makes editing the xmls a litte more confusing, as it alternates what is shows. For example, from left to right on your screen you will now see hotbar_1 slots 1-4, then hotbar_2 slots 1-4, then hotbar_1 slots 5-8 and finally hotbar_2 slots 5-8. Keep that in mind if manually editing the xmls.
 
+Hotbar File Hierarchy & Light/Dark Arts Overlays:
+
+    Your hotbars are no longer one single active environment file. Instead they are built by merging several XML files together, lowest priority to highest. All of these live under data/hotbar/{Server}/{Character}/:
+
+        ALL-JOBS-DEFAULT.xml          - applies to every job
+        {MAINJOB}-DEFAULT.xml         - e.g. RDM-DEFAULT.xml, applies to that main job on any subjob
+        {MAINJOB}-{SUBJOB}.xml        - e.g. RDM-SCH.xml, the specific job/subjob combo
+
+    The merge happens slot-by-slot. When the same set name shows up in more than one file, a higher-priority file fills only the slots it actually defines, and any slot it leaves empty falls through to the lower-priority file. So you can define your common actions once in a broad file (like ALL-JOBS-DEFAULT.xml) and let the job/subjob files fill in just the slots that differ - no need to redefine a whole set for every combo. A set that only exists in one file just appears on its own.
+
+    Light Arts / Dark Arts overlays:
+
+        You can also make optional overlay files named {MAINJOB}-{SUBJOB}-lightarts.xml and {MAINJOB}-{SUBJOB}-darkarts.xml (e.g. RDM-SCH-lightarts.xml). When you activate Light Arts or Dark Arts in-game - by any means, gamepad, hotbar, or the /ja command - the matching overlay file gets layered on top of your current sets and merges slot-by-slot just like the others. Switching arts swaps the overlay; changing job or subjob clears it. If the overlay file doesn't exist, nothing happens - it's entirely optional and safe to omit. Only Light Arts and Dark Arts are supported as overlays.
+
+    In-game editing lands in the JOB-DEFAULT file:
+
+        Every edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is written to {MAINJOB}-DEFAULT.xml - the job-default file. That file is created automatically the first time you log in on a job that doesn't have one yet, so it always exists for you to build on.
+
+        ALL-JOBS-DEFAULT.xml, the {MAINJOB}-{SUBJOB}.xml files, and the Light/Dark Arts overlays are meant to be made and edited by hand in a text editor - the in-game editor never writes them. When one of those is missing, a default set is still built in memory so it shows up in the editor; it just isn't written to disk.
+
+        One thing to keep in mind: because in-game edits always land in the job-default file - which sits below the job/subjob file and the arts overlays in priority - if you hand-define the same slot in {MAINJOB}-{SUBJOB}.xml or in a Light/Dark Arts file, that higher-priority file wins in the merged view and your in-game edit to that slot won't show. Edit it in the file that defines it. Likewise, deleting a slot in-game only clears the job-default copy; a copy defined in a broader hand-made file reappears on the next merge.
+
 Controller changes:
 
     The controller AHK will now auto-select FFXI window if FFXI is not the active window when pushing one of the 4 facebuttons!
