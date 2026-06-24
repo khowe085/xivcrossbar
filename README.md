@@ -31,6 +31,8 @@ Hotbar File Hierarchy & Light/Dark Arts Overlays:
 
         You can also make optional overlay files named {MAINJOB}-{SUBJOB}-lightarts.xml and {MAINJOB}-{SUBJOB}-darkarts.xml (e.g. RDM-SCH-lightarts.xml). When you activate Light Arts or Dark Arts in-game - by any means, gamepad, hotbar, or the /ja command - the matching overlay file gets layered on top of your current sets and merges slot-by-slot just like the others. Switching arts swaps the overlay; changing job or subjob clears it. If the overlay file doesn't exist, nothing happens - it's entirely optional and safe to omit. Only Light Arts and Dark Arts are supported as overlays.
 
+        One thing to know while editing: because the Light/Dark Arts overlay is layered on top and wins where it defines a slot, any in-game edit you make to a slot that the active overlay also defines won't appear to take effect until you turn that art off (the edit IS saved to your {MAINJOB}-{SUBJOB}.xml - it's just hidden behind the overlay). Either edit with Light/Dark Arts inactive, or hand-edit the overlay file directly.
+
     In-game editing lands in the job/subjob file:
 
         Any edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is saved to the {MAINJOB}-{SUBJOB}.xml file. The broader ALL-JOBS-DEFAULT.xml and {MAINJOB}-DEFAULT.xml files, and the Light/Dark Arts overlays, are meant to be hand-edited in a text editor. One thing to watch out for: because in-game deletes only touch the job/subjob file, you can't delete an action through the editor if it was defined in a lower-priority file (ALL-JOBS-DEFAULT.xml or {MAINJOB}-DEFAULT.xml) - it'll just come back from the lower file on the next merge. To get rid of it, edit the file that actually defines it.

@@ -32,18 +32,18 @@ storage.filename = ''
 storage.directory = ''
 storage.file = nil
 
+-- normalize the subjob token: no subjob (nil / '' / 'NON') -> 'NOSUB'
+local function normalize_sub(sub)
+    if sub == nil or sub == '' or sub == 'NON' then
+        return 'NOSUB'
+    end
+    return sub
+end
+
 -- setup storage for current player
 function storage:setup(player)
-    local sub_job = player.sub_job
-    if (sub_job == nil) then
-        sub_job = 'NOSUB'
-    end
-    self.filename = player.main_job .. '-' .. sub_job
     self.directory = player.server .. '/' .. player.name
-
-    self.file = file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '.xml')
-    self.job_default_file = file.new('data/hotbar/' .. self.directory .. '/' .. player.main_job .. '-DEFAULT.xml')
-    self.all_jobs_file = file.new('data/hotbar/' .. self.directory .. '/ALL-JOBS-DEFAULT.xml')
+    self:update_filename(player.main_job, player.sub_job)
 end
 
 -- get a handle to an ability overlay file: e.g. SCH-NOSUB-lightarts.xml
@@ -67,7 +67,7 @@ end
 
 -- update filename according to jobs
 function storage:update_filename(main, sub)
-    self.filename = main .. '-' .. sub
+    self.filename = main .. '-' .. normalize_sub(sub)
     self.file = file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '.xml')
     self.job_default_file = file.new('data/hotbar/' .. self.directory .. '/' .. main .. '-DEFAULT.xml')
     self.all_jobs_file = file.new('data/hotbar/' .. self.directory .. '/ALL-JOBS-DEFAULT.xml')

@@ -977,15 +977,15 @@ windower.register_event('job change',function(main_job, main_job_level, sub_job,
     player:update_jobs(resources.jobs[main_job].ens, resources.jobs[sub_job].ens)
     current_arts = nil
     player:unload_all_overlays()
-    local default_active_environment = env_chooser:get_default_active_environment(player.hotbar)
-    player:set_active_environment(default_active_environment)
     reload_hotbar()
+    local default_active_environment = env_chooser:get_default_active_environment(player.hotbar)
+    set_active_environment(default_active_environment)
 end)
 
 windower.register_event('action', function(act)
     -- Don't swap crossbars when someone *else* uses Light/Dark Arts
     local windower_player = windower.ffxi.get_player()
-    if (act.actor_id ~= windower_player.id) then
+    if (windower_player == nil or act.actor_id ~= windower_player.id) then
         return
     end
 

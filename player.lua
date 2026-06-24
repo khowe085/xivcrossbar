@@ -647,10 +647,10 @@ function player:create_new_environment(name)
     end
 end
 
--- save current hotbar
+-- save current hotbar. In-game edits only ever modify the job-sub level
+-- (hotbar_levels[3]); the broader all-jobs / job-default files are hand-edited,
+-- so we must not rewrite (and thereby strip comments/formatting from) them here.
 function player:save_hotbar()
-    storage:save_level(self.hotbar_levels[1].data, storage.all_jobs_file)
-    storage:save_level(self.hotbar_levels[2].data, storage.job_default_file)
     storage:save_level(self.hotbar_levels[3].data, storage.file)
 end
 
