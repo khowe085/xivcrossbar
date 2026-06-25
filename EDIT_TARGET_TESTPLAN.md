@@ -77,7 +77,9 @@ target) so you can tell at a glance which file/overlay is showing.
 ## Phase 3 — Edits land in the file matching the selected target
 
 For each target below: open binder → **Select Edit Target** → pick the target → assign a
-**distinct** action to a slot → verify on disk.
+**distinct** action to a **different empty slot** per target → verify on disk. Use a
+different slot for each so all three stay visible at once; if you reuse one slot, only the
+highest-priority layer (job+sub) shows in-game even though every file is written correctly.
 
 - [ ] **3.1 Job + Sub Default** → assignment written to **`SCH-RDM.xml`**.
 - [ ] **3.2 All Jobs Default** → assignment written to **`ALL-JOBS-DEFAULT.xml`**.
@@ -88,6 +90,9 @@ For each target below: open binder → **Select Edit Target** → pick the targe
   reflected in **`SCH-RDM.xml`** (not job-default).
 - [ ] **3.6 (optional)** copy / move / re-alias / change-icon also write to the selected
   target file.
+- [ ] **3.7 (optional) merge priority:** assign the **same** slot in two layers (e.g. Job
+  Default and Job + Sub) → in-game only the **higher** layer (job+sub) shows, but **both
+  files** still hold their own copy of that slot. Confirms layering without data loss.
 
 ## Phase 4 — UI
 
