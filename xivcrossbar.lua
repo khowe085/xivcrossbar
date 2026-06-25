@@ -1021,9 +1021,9 @@ function sync_arts_overlays()
     end
 
     local arts = nil
-    if active[LIGHT_ARTS_BUFF] then
+    if active[LIGHT_ARTS_BUFF] or active[ADDENDUM_WHITE_BUFF] then
         arts = 'LA'
-    elseif active[DARK_ARTS_BUFF] then
+    elseif active[DARK_ARTS_BUFF] or active[ADDENDUM_BLACK_BUFF] then
         arts = 'DA'
     end
 
