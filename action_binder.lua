@@ -869,7 +869,7 @@ function action_binder:display_edit_file_selector()
     local labels = {
         [1] = 'All Jobs Default',
         [2] = 'Job Default',
-        [3] = 'Job + Sub Default',
+        [3] = 'Job-Sub',
         [4] = 'Light Arts',
         [5] = 'Dark Arts',
         [6] = 'Addendum: White',
