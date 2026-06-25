@@ -1,8 +1,8 @@
 # XIVCrossbar — Edit Target & Overlay Test Plan
 
-In-game test plan for the **Select Edit Target** feature and the **Light/Dark Arts +
-Addendum overlays**. It starts from a **clean (empty) character directory** and validates
-that:
+Run this after **any** change to XIVCrossbar to confirm the **Select Edit Target** feature
+and the **Light/Dark Arts + Addendum overlays** still behave correctly. It starts from a
+**clean (empty) character directory** and checks that:
 
 1. The correct XML files are **created and written** (and that nothing is written on load).
 2. In-game edits **land in the file matching the selected target**.
@@ -20,7 +20,7 @@ This is a manual plan — XIVCrossbar has no automated test harness. Tick the bo
 - **Clean slate:** back up and remove every file in
   `data/hotbar/{Server}/{Character}/` for the job/sub you're testing, so the directory
   starts empty. (Keep a backup if these are real hotbars.)
-- Pull this branch into your Windower addon folder and run `//lua r xivcrossbar`.
+- After applying your change, reload the addon: `//lua r xivcrossbar`.
 - Know how you open the **action binder** (the binding menu — e.g. `Ctrl+Minus` /
   gamepad **Minus**).
 
@@ -177,5 +177,3 @@ Use the slots seeded in Phase 5 so each overlay shows something recognizable.
 - [ ] All phases pass
 - [ ] No Lua errors in the console during any step
 - [ ] Footer position acceptable in your resolution (note if it needs tuning)
-
-_Last updated for the Edit Target Selector + overlay buff-detection work._
