@@ -53,8 +53,6 @@ player.hotbar_settings.max = 1
 player.hotbar_settings.active_hotbar = 1
 player.hotbar_settings.active_environment = 'Field'
 
-player.auto_create_xml = true
-
 -- initialize player
 function player:initialize(windower_player, server, theme_options, enchanted_items)
     self.name = windower_player.name
@@ -73,13 +71,7 @@ function player:initialize(windower_player, server, theme_options, enchanted_ite
 
     self.sch_jp_spent = windower_player.job_points.sch.jp_spent
 
-    self.auto_create_xml = theme_options.AutoCreateXML
-
     storage:setup(self)
-end
-
-local unescape = function(str)
-    return str:gsub('&apos;', '\''):gsub('quote', '"')
 end
 
 -- update player jobs
@@ -87,7 +79,7 @@ function player:update_jobs(main, sub)
     self.main_job = main
     self.sub_job = sub
 
-    storage:update_filename(main, sub)
+    storage:update_main_job(main, sub)
 end
 
 function player:get_id()
@@ -134,37 +126,20 @@ end
 function player:load_hotbar()
     self:update_current_spells()
     self:reset_hotbar()
-    local newly_created = false
 
-    -- if normal hotbar file exists, load it. If not, create a default hotbar
-    if storage.file:exists() then
-        windower.console.write('[XIVCrossbar] Load crossbar sets for ' .. storage.filename)
-        self:load_from_file(storage.file)
-    elseif self.auto_create_xml then
-        newly_created = true
-        self:create_default_hotbar()
+    local job_data, all_jobs_data = storage:read_hotbar()
+
+    if job_data ~= nil then
+        windower.console.write('[XIVCrossbar] Load crossbar sets for ' .. storage.main_job)
+        self:load_from_lua_table(job_data)
+    else
+        self.hotbar.field = { name = 'Field' }
+        self:setup_environment_hotbars('field')
     end
 
-    -- if job default file exists, load it. If not, create a default version
-    if storage.job_default_file:exists() then
-        windower.console.write('[XIVCrossbar] Load cross-subjob fallback crossbar set for ' .. player.main_job)
-        self:load_from_file(storage.job_default_file)
-    elseif self.auto_create_xml then
-        newly_created = true
-        self:create_job_default_hotbar()
-    end
-
-    -- if all jobs file exists, load it. If not, create a default version
-    if storage.all_jobs_file:exists() then
-        windower.console.write('[XIVCrossbar] Load cross-job fallback crossbar set')
-        self:load_from_file(storage.all_jobs_file)
-    elseif self.auto_create_xml then
-        newly_created = true
-        self:create_all_jobs_default_hotbar()
-    end
-
-    if (newly_created) then
-        player:store_new_hotbars()
+    if all_jobs_data ~= nil then
+        windower.console.write('[XIVCrossbar] Load general crossbar sets')
+        self:load_from_lua_table(all_jobs_data)
     end
 end
 
@@ -172,108 +147,32 @@ function kebab_casify(str)
     return str:lower():gsub(' ', '-'):gsub('\'', '')
 end
 
--- load a hotbar from existing file
-function player:load_from_file(storage_file)
-    local contents = xml.read(storage_file)
-
-    if contents.name ~= 'hotbar' then
-        windower.console.write('XIVCROSSBAR: invalid hotbar on ' .. storage.filename)
-        return
-    end
-
-    -- parse xml to hotbar
-    for key, environment in ipairs(contents.children) do
-        local environment_name = nil
-        for key, hotbar in ipairs(environment.children) do     -- hotbar number
-            if (hotbar.name == 'name') then
-                for key, name in ipairs(hotbar.children) do
-                    environment_name = name.value
-                end
-            end
-        end
-        if (environment_name == nil) then
-            environment_name = key
-        end
-        for key, hotbar in ipairs(environment.children) do     -- hotbar number
-            if (hotbar.name ~= 'name') then
-                for key, slot in ipairs(hotbar.children) do       -- slot number
-                    local new_action = {}
-
-                    for key, tag in ipairs(slot.children) do   -- action
-                        if tag.name == 'type' then
-                            new_action.type = tag.children[1].value
-                        elseif tag.name == 'action' then
-                            new_action.action = unescape(tag.children[1].value)
-                        elseif tag.name == 'target' then
-                            if tag.children[1] == nil then
-                                new_action.target = nil
-                            else
-                                new_action.target = tag.children[1].value
-                            end
-
-                        elseif tag.name == 'alias' then
-                            new_action.alias = tag.children[1].value
-                        elseif tag.name == 'icon' then
-                            new_action.icon = tag.children[1].value
-                        elseif tag.name == 'equip_slot' then
-                            new_action.equip_slot = tag.children[1].value
-                        elseif tag.name == 'warmup' then
-                            new_action.warmup = tag.children[1].value
-                        elseif tag.name == 'cooldown' then
-                            new_action.cooldown = tag.children[1].value
-                        elseif tag.name == 'usable' then
-                            new_action.usable = tag.children[1].value
+-- load a hotbar from a deserialized Lua table (the Lua-file format)
+-- env_table shape: { [env_key] = { name=str, hotbar_N={ slot_N={type,action,...}, ... }, ... }, ... }
+function player:load_from_lua_table(env_table)
+    for env_key, environment in pairs(env_table) do
+        if type(environment) == 'table' then
+            local env_name = environment.name or env_key
+            for hb_key, hotbar in pairs(environment) do
+                if hb_key ~= 'name' and type(hotbar) == 'table' then
+                    local hb_num = hb_key:gsub('hotbar_', '')
+                    for slot_key, action_data in pairs(hotbar) do
+                        local slot_num = slot_key:gsub('slot_', '')
+                        if type(action_data) == 'table' and action_data.type ~= nil then
+                            self:add_action(
+                                action_manager:build(
+                                    action_data.type,      action_data.action,    action_data.target,
+                                    action_data.alias,     action_data.icon,      action_data.equip_slot,
+                                    action_data.warmup,    action_data.cooldown,  action_data.usable
+                                ),
+                                env_name, hb_num, slot_num
+                            )
                         end
                     end
-
-                    self:add_action(
-                        action_manager:build(new_action.type, new_action.action, new_action.target, new_action.alias, new_action.icon, new_action.equip_slot, new_action.warmup, new_action.cooldown, new_action.usable),
-                        environment_name,
-                        hotbar.name:gsub('hotbar_', ''),
-                        slot.name:gsub('slot_', '')
-                    )
                 end
             end
         end
     end
-end
-
--- create a default hotbar
-function player:create_default_hotbar()
-    windower.console.write('[XIVCrossbar] No hotbar found. Creating default for ' .. storage.filename)
-
-    self.hotbar.default = {}
-    self.hotbar.default['name'] = 'Default'
-    self:setup_environment_hotbars('default')
-
-    self.hotbar.basic = {}
-    self.hotbar.basic['name'] = 'Basic'
-    self:setup_environment_hotbars('basic')
-end
-
--- create a fallback hotbar that applies to all subjobs of this job
-function player:create_job_default_hotbar()
-    windower.console.write('[XIVCrossbar] No cross-subjob fallback crossbar set found. Creating a default version')
-
-    self.hotbar['job-default'] = {}
-    self.hotbar['job-default']['name'] = 'Job Default'
-    self:setup_environment_hotbars('job-default')
-end
-
--- create a fallback hotbar that applies to all jobs on this character
-function player:create_all_jobs_default_hotbar()
-    windower.console.write('[XIVCrossbar] No cross-job fallback crossbar set found. Creating a default version')
-
-    self.hotbar['all-jobs-default'] = {}
-    self.hotbar['all-jobs-default']['name'] = 'All Jobs Default'
-    self:setup_environment_hotbars('all-jobs-default')
-end
-
-function player:store_new_hotbars()
-    local new_hotbar = {}
-    new_hotbar.hotbar = self.hotbar
-
-    storage:store_new_hotbar(new_hotbar)
 end
 
 -- reset player hotbar
@@ -383,22 +282,11 @@ function player:execute_action(slot)
     local h = self.hotbar_settings.active_hotbar
     local env = self.hotbar_settings.active_environment
 
+    if self.hotbar[env] == nil then return end
+    if self.hotbar[env]['hotbar_' .. h] == nil then return end
+
     local action = self.hotbar[env]['hotbar_' .. h]['slot_' .. slot]
-    local is_missing = action == nil or action.action == nil
-
-    if (is_missing and env ~= 'default' and env ~= 'job-default' and env ~= 'all-jobs-default' and self.hotbar['default'] and self.hotbar['default']['hotbar_' .. h] and
-        self.hotbar['default']['hotbar_' .. h]['slot_' .. slot]) then
-        action = self.hotbar['default']['hotbar_' .. h]['slot_' .. slot]
-    elseif (is_missing and env ~= 'job-default' and env ~= 'all-jobs-default' and self.hotbar['job-default'] and self.hotbar['job-default']['hotbar_' .. h] and
-        self.hotbar['job-default']['hotbar_' .. h]['slot_' .. slot]) then
-        action = self.hotbar['job-default']['hotbar_' .. h]['slot_' .. slot]
-    elseif (is_missing and env ~= 'all-jobs-default' and self.hotbar['all-jobs-default'] and self.hotbar['all-jobs-default']['hotbar_' .. h] and
-        self.hotbar['all-jobs-default']['hotbar_' .. h]['slot_' .. slot]) then
-        action = self.hotbar['all-jobs-default']['hotbar_' .. h]['slot_' .. slot]
-    end
-
-    local is_still_missing = action == nil or action.action == nil
-    if (is_still_missing) then return end
+    if action == nil or action.action == nil then return end
 
     if action.type == 'ct' then
         local command = '/' .. action.action
@@ -533,10 +421,7 @@ end
 
 -- save current hotbar
 function player:save_hotbar()
-    local new_hotbar = {}
-    new_hotbar.hotbar = self.hotbar
-
-    storage:save_hotbar(new_hotbar)
+    storage:write_hotbar(self.hotbar)
 end
 
 return player

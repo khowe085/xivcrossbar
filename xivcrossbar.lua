@@ -41,7 +41,6 @@ texts = require('texts')
 images = require('images')
 tables = require('tables')
 resources = require('resources')
-xml = require('libs/xml2')   -- TODO: REMOVE
 
 -- User settings
 local defaults = require('defaults')
@@ -436,12 +435,6 @@ function new_environment_command(args)
     end
 
     local environment = args[1]
-    local env_lower = environment:lower()
-
-    if (env_lower == 'default' or env_lower == 'job-default' or env_lower == 'all-jobs-default') then
-        print('XIVCROSSBAR: Crossbar set name "' .. environment .. '" is reserved. Unable to create.')
-        return
-    end
 
     player:create_new_environment(environment)
     player:save_hotbar()

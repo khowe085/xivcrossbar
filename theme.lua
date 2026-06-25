@@ -34,7 +34,6 @@ theme.apply = function (settings)
     options.frame_skip = settings.FrameSkip or 0
     options.allow_stpc_for_self_targeted_actions = settings.AllowSTPCForSelfTargetedActions or false
 
-    options.AutoCreateXML = settings.AutoCreateXML
     options.UseAltLayout = settings.UseAltLayout
     options.AutoHideExtraBars = settings.AutoHideExtraBars
 
