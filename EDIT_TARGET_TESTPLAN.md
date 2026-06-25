@@ -32,7 +32,7 @@ All files live under `data/hotbar/{Server}/{Character}/`. With no subjob, `{SUB}
 |-------------------|---------------------------|------------------------|
 | All Jobs Default  | `ALL-JOBS-DEFAULT.xml`    | `ALL-JOBS-DEFAULT.xml` |
 | Job Default       | `{MAIN}-DEFAULT.xml`      | `SCH-DEFAULT.xml`      |
-| Job + Sub Default | `{MAIN}-{SUB}.xml`        | `SCH-RDM.xml`          |
+| Job-Sub           | `{MAIN}-{SUB}.xml`        | `SCH-RDM.xml`          |
 | Light Arts        | `{MAIN}-{SUB}-LA.xml`     | `SCH-RDM-LA.xml`       |
 | Dark Arts         | `{MAIN}-{SUB}-DA.xml`     | `SCH-RDM-DA.xml`       |
 | Addendum: White   | `{MAIN}-{SUB}-LA-AW.xml`  | `SCH-RDM-LA-AW.xml`    |
@@ -44,7 +44,7 @@ All files live under `data/hotbar/{Server}/{Character}/`. With no subjob, `{SUB}
   and look for the action you assigned (the file is a `<hotbar>` tree; search it for the
   action name).
 - **In-game merged view** is secondary. Layers merge by priority, **lowest to highest**:
-  `all-jobs (1) < job-default (2) < job+sub (3) < arts overlay < addendum`. A higher layer
+  `all-jobs (1) < job-default (2) < job-sub (3) < arts overlay < addendum`. A higher layer
   wins per slot — so if an edit "doesn't show," a higher layer already defines that slot.
   Test on an **empty slot**, or trust the file.
 - **Windower console** (`//console`) is used only for the "no stray messages" checks.
@@ -76,23 +76,42 @@ target) so you can tell at a glance which file/overlay is showing.
 
 ## Phase 3 — Edits land in the file matching the selected target
 
-For each target below: open binder → **Select Edit Target** → pick the target → assign a
-**distinct** action to a **different empty slot** per target → verify on disk. Use a
-different slot for each so all three stay visible at once; if you reuse one slot, only the
-highest-priority layer (job+sub) shows in-game even though every file is written correctly.
+Run the **same four route checks against each static target**, in the order they appear in
+the **Select Edit Target** list: **All Jobs Default → Job Default → Job-Sub**.
+(The four overlay targets — Light Arts, Dark Arts, Addendum: White/Black — are covered in
+Phases 5–6.) Use a **distinct, recognizable action** and a **distinct empty slot** for each
+file so you can tell the layers apart on disk. **Disk is the source of truth** — open the
+XML and search it for the action name.
 
-- [ ] **3.1 Job + Sub Default** → assignment written to **`SCH-RDM.xml`**.
-- [ ] **3.2 All Jobs Default** → assignment written to **`ALL-JOBS-DEFAULT.xml`**.
-- [ ] **3.3 Job Default** → assignment written to **`SCH-DEFAULT.xml`**.
-- [ ] **3.4 Cross-check isolation:** each assignment appears **only** in its target file,
-  not duplicated into the others.
-- [ ] **3.5 Delete routes too:** with target = Job + Sub, delete a slot → the deletion is
-  reflected in **`SCH-RDM.xml`** (not job-default).
-- [ ] **3.6 (optional)** copy / move / re-alias / change-icon also write to the selected
-  target file.
-- [ ] **3.7 (optional) merge priority:** assign the **same** slot in two layers (e.g. Job
-  Default and Job + Sub) → in-game only the **higher** layer (job+sub) shows, but **both
-  files** still hold their own copy of that slot. Confirms layering without data loss.
+For each file, the four steps are: **select** the target (footer confirms) → **assign** and
+verify on disk → check **isolation** → **delete** and verify on disk.
+
+- [ ] **3.1 — All Jobs Default → `ALL-JOBS-DEFAULT.xml`**
+  - [ ] Select Edit Target → **All Jobs Default**; footer reads **`Editing: ALL-JOBS-DEFAULT.xml`**.
+  - [ ] Assign a distinct action to a distinct empty slot → on disk **`ALL-JOBS-DEFAULT.xml`**
+    is created (if absent) and contains it.
+  - [ ] **Isolation:** that action is in **`ALL-JOBS-DEFAULT.xml`** only — not in any other
+    target file.
+  - [ ] Delete that slot (target unchanged) → on disk **`ALL-JOBS-DEFAULT.xml`** no longer
+    contains it.
+- [ ] **3.2 — Job Default → `SCH-DEFAULT.xml`**
+  - [ ] Select Edit Target → **Job Default**; footer reads **`Editing: SCH-DEFAULT.xml`**.
+  - [ ] Assign a distinct action to a distinct empty slot → on disk **`SCH-DEFAULT.xml`**
+    contains it.
+  - [ ] **Isolation:** that action is in **`SCH-DEFAULT.xml`** only.
+  - [ ] Delete that slot → on disk **`SCH-DEFAULT.xml`** no longer contains it.
+- [ ] **3.3 — Job-Sub → `SCH-RDM.xml`**
+  - [ ] Select Edit Target → **Job-Sub**; footer reads **`Editing: SCH-RDM.xml`**.
+  - [ ] Assign a distinct action to a distinct empty slot → on disk **`SCH-RDM.xml`** is
+    created (if absent) and contains it.
+  - [ ] **Isolation:** that action is in **`SCH-RDM.xml`** only.
+  - [ ] Delete that slot → on disk **`SCH-RDM.xml`** no longer contains it.
+
+**Shared checks** (run once, after the per-file loop):
+
+- [ ] **3.4 Merge priority (no data loss):** assign the **same** slot in two layers (Job
+  Default *and* Job-Sub) → in-game only the **higher** layer (job-sub) shows, but **both
+  files** still hold their own copy of that slot on disk. Confirms layering without clobber.
 
 ## Phase 4 — UI
 
@@ -104,9 +123,10 @@ highest-priority layer (job+sub) shows in-game even though every file is written
   `Active: Job Default`) and reflects the *currently active* target.
 - [ ] **4.4 Subtitle scoping:** Go Back to the action-type list → the `Active:` subtitle is
   **gone** (it only shows on the selector screen).
-- [ ] **4.5 Footer (all screens):** every binder screen shows **`Editing: <file>`** for the
-  active target, sitting clear to the **left of the Confirm hint** (no overlap, even with
-  the longest name `…-LA-AW.xml`).
+- [ ] **4.5 Footer (all screens):** every binder screen shows **`Editing: <file>`** — the
+  exact on-disk filename for the active target (including the full `…-LA-AW.xml` for an
+  addendum overlay) — sitting clear to the **left of the Confirm hint** (no overlap even with
+  the longest name).
 - [ ] **4.6 Footer updates:** select **Dark Arts** as the target → reopen any screen → the
   footer now reads **`Editing: SCH-RDM-DA.xml`**.
 
@@ -128,7 +148,12 @@ loaded. (Delete the target file first if it already exists.)
 
 ## Phase 6 — Overlays work in-game (Light/Dark Arts + Addenda)
 
-Use the slots seeded in Phase 5 so each overlay shows something recognizable.
+Use the slots seeded in Phase 5 so each overlay shows something recognizable. Overlays are
+driven by **buff** events: the addon watches `gain buff` / `lose buff` for the arts and
+addendum status ids (Light **358**, Dark **359**, Addendum: White **401**, Addendum: Black
+**402**) and layers the matching file on top. `load_ability_overlay` **silently no-ops when
+the overlay file is missing**, so if you skipped Phase 5 the slots simply won't appear —
+that's expected, not a failure. Confirm the Phase-5 files exist before running these.
 
 - [ ] **6.1 Light Arts:** use Light Arts → the **`SCH-RDM-LA`** slot(s) appear on the bar.
 - [ ] **6.2 Switch to Dark Arts:** use Dark Arts → LA slots disappear, **`SCH-RDM-DA`**
@@ -139,29 +164,41 @@ Use the slots seeded in Phase 5 so each overlay shows something recognizable.
   Arts** → both LA and LA-AW slots clear; DA slots load.
 - [ ] **6.5 Addendum: Black:** with Dark Arts active, use **Addendum: Black** →
   **`SCH-RDM-DA-AB`** slots layer on the DA slots.
-- [ ] **6.6 Losing arts:** cancel or let Light Arts expire → its overlay **and** any active
-  addendum clear back to the base bars.
-- [ ] **6.7 Arts already active on reload:** with **Light Arts up**, run
-  `//lua r xivcrossbar` → after reload the LA overlay is **loaded** (slots present)
-  **without** re-toggling arts.
+- [ ] **6.6 Arts + addendum re-apply on full reload:** with **Light Arts + Addendum: White
+  up**, run `//lua r xivcrossbar` → after reload **both** the LA and LA-AW overlays are
+  **loaded** (slots present) **without** re-toggling — the addon re-scans your active buffs on
+  login. Repeat with **Dark Arts + Addendum: Black**.
+- [ ] **6.7 Arts re-apply on `//xb reload`:** with **Light Arts (+ addendum) up**, run the
+  addon's own `//xb reload` → the overlay(s) stay loaded. This is a **different** path than
+  6.6 — `//xb reload` re-applies from the addon's tracked arts state, not a buff scan — so
+  test both.
 - [ ] **6.8 Edit while arts active:** with Light Arts active, target = Light Arts, assign a
   slot → it appears immediately and **persists** through a following edit (overlay stays
   loaded).
 
-> If an overlay ever lags one beat behind the arts toggle, that's the known Windower
-> `gain/lose buff` timing quirk — a second toggle or `//lua r` settles it. (Reference buff
-> ids: Light 358, Dark 359, Addendum: White 401, Addendum: Black 402.)
+> Overlays follow **buff** events, which can arrive a beat after the ability animation or out
+> of order. The addon guards against this: a `lose buff` only unloads an overlay when it still
+> matches the currently loaded arts/addendum, so a late "lose" can't clobber an overlay a
+> newer "gain" just applied (e.g. a fast Light → Dark swap keeps the DA overlay). If an
+> overlay ever looks one beat behind, a second toggle or `//lua r xivcrossbar` settles it.
 
-## Phase 7 — Target resets to Job Default
+## Phase 7 — Edit target persists across edits; resets on reload / job change
 
-- [ ] **7.1 On reload:** set target = Dark Arts (footer confirms) → `//lua r xivcrossbar` →
-  reopen the selector → **Active: Job Default** (footer back to `…-DEFAULT.xml`).
-- [ ] **7.2 On job change:** set target = Light Arts → change job or subjob → target back to
-  **Job Default**; arts overlays cleared.
+- [ ] **7.1 Persists across edits:** select a non-default target (e.g. **Job-Sub**), then
+  **assign** and **remove** an action → the target **stays selected** — the footer still
+  shows the same file and the selector subtitle still reads `Active: <layer>`. It must **not**
+  snap back to Job Default after an edit.
+- [ ] **7.2 On reload:** set target = Dark Arts (footer confirms) → `//lua r xivcrossbar` →
+  reopen the selector → **Active: Job Default** (footer back to `…-DEFAULT.xml`). Repeat with
+  the addon's own **`//xb reload`** — both routes rebuild the hotbar and must reset the target.
+- [ ] **7.3 On job change (also the normal way arts come off):** with **Light Arts + an
+  addendum up** and target = Light Arts, change job or subjob → the job change **drops the
+  arts buffs** and clears **both** overlay layers back to the base bars, and the edit target
+  resets to **Job Default**. (Switching to the *other* arts is covered by 6.2/6.4.)
 
 ## Phase 8 — New crossbar set (`//xb new`) respects the target
 
-- [ ] **8.1** Target = **Job + Sub Default**, run `//xb new TestSet` → written to
+- [ ] **8.1** Target = **Job-Sub**, run `//xb new TestSet` → written to
   **`SCH-RDM.xml`**.
 - [ ] **8.2** Target = **Light Arts**, `//xb new TestArtsSet` → written to
   **`SCH-RDM-LA.xml`**.
@@ -171,7 +208,8 @@ Use the slots seeded in Phase 5 so each overlay shows something recognizable.
 - [ ] **9.1** Hand-made files you didn't touch are **not** rewritten on load (timestamps
   unchanged).
 - [ ] **9.2** Switching characters loads the new character's files; the previous
-  character's files are untouched (no cross-character clobber).
+  character's files are untouched (no cross-character clobber). If the **new** character has
+  arts up on login, their overlay re-applies (the buff re-scan runs on login too).
 - [ ] **9.3** Core binder features unaffected: normal slot assignment, Switch Crossbars,
   Move Crossbar still work.
 
