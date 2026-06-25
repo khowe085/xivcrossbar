@@ -88,6 +88,8 @@ function player:initialize(windower_player, server, theme_options, enchanted_ite
 
     self.auto_create_xml = theme_options.AutoCreateXML
 
+    self:reset_edit_target()
+
     storage:setup(self)
 end
 
@@ -101,6 +103,8 @@ function player:update_jobs(main, sub)
     self.sub_job = sub
 
     storage:update_filename(main, sub)
+
+    self:reset_edit_target()
 end
 
 function player:get_id()
@@ -381,9 +385,6 @@ function player:reset_hotbar()
         { name = 'job-sub', file = nil, data = { hotbar = {} } }
     }
 
-    self.edit_target_level        = 2
-    self.edit_target_overlay_name = nil
-
     self.hotbar_settings.active_hotbar = 1
 end
 
@@ -448,6 +449,13 @@ end
 -- return the current edit target selector ID (1-7)
 function player:get_edit_target()
     return self.edit_target_level
+end
+
+-- reset the in-game edit target to Job Default (level 2). Done on load/login and on job
+-- change -- NOT on the reloads that follow an edit, so the selection persists across edits.
+function player:reset_edit_target()
+    self.edit_target_level        = 2
+    self.edit_target_overlay_name = nil
 end
 
 -- basename of the file the current edit target writes to (for display)
