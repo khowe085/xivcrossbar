@@ -97,7 +97,8 @@ theme.apply = function (settings)
     options.text_offset_x = settings.Texts.OffsetX
     options.text_offset_y = settings.Texts.OffsetY
 
-    options.controls_battle_mode = settings.Controls.ToggleBattleMode
+    options.controls_battle_mode        = settings.Controls.ToggleBattleMode
+    options.lock_dual_trigger_to_bar3   = settings.Controls.LockDualTriggerToBar3
 
     return options
 end

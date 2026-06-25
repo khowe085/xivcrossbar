@@ -62,7 +62,8 @@ defaults.Hotbar.HideRecastText = false
 defaults.Hotbar.HideBattleNotice = false
 
 defaults.Controls = {}
-defaults.Controls.ToggleBattleMode = 43
+defaults.Controls.ToggleBattleMode        = 43
+defaults.Controls.LockDualTriggerToBar3   = false
 
 defaults.Theme = {}
 defaults.Theme.BattleNotice = 'ffxiv'

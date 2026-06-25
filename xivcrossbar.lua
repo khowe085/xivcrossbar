@@ -746,7 +746,7 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
             gamepad_state.active_bar = 2
         end
     elseif (gamepad_state.capturing and gamepad_state.right_trigger and gamepad_state.left_trigger) then
-        if (theme_options.hotbar_number > 3) then
+        if (theme_options.hotbar_number > 3 and not theme_options.lock_dual_trigger_to_bar3) then
             if (left_trigger_just_pressed) then
                 -- R -> L = bar 3
                 change_active_hotbar(3)
