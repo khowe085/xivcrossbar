@@ -273,9 +273,9 @@ end
 -- in job_data eagerly so its content is persisted whenever {JOB}.lua is next written.
 function player:create_job_default_hotbar()
     local data = self.hotbar_levels[2].data
-    data.sets['battle'] = {}
-    data.sets['battle']['name'] = 'General'
-    self:setup_environment_hotbars(data.sets, 'battle')
+    data.sets['general'] = {}
+    data.sets['general']['name'] = 'General'
+    self:setup_environment_hotbars(data.sets, 'general')
 
     storage.job_data[storage.job_default_key] = data
 end
