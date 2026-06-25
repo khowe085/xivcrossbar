@@ -1273,7 +1273,7 @@ function action_binder:show_control_hints(confirm, go_back)
     if (self.get_edit_target_filename_binding ~= nil) then
         local filename = self.get_edit_target_filename_binding()
         if (filename ~= nil) then
-            local label = self:create_text('Editing: ' .. filename, x2 - 230, y + 10)
+            local label = self:create_text('Editing: ' .. filename, x2 - 530, y + 10)
             label:size(13)
             self.hints:append(label)
         end
