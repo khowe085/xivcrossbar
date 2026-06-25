@@ -85,6 +85,11 @@ local shift_pressed = false
 local ui_dirty = false
 local current_arts = nil
 local current_addendum = nil
+-- Scholar arts/addendum are identified by the STATUS (buff) id they grant
+local LIGHT_ARTS_BUFF     = 358
+local DARK_ARTS_BUFF      = 359
+local ADDENDUM_WHITE_BUFF = 401
+local ADDENDUM_BLACK_BUFF = 402
 local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
@@ -231,6 +236,8 @@ function initialize()
 
     xivcrossbar.ready = true
     xivcrossbar.initialized = true
+
+    apply_active_arts_overlays()
 end
 
 -- trigger hotbar action
@@ -985,12 +992,6 @@ windower.register_event('status change', function(new_status_id)
     end
 end)
 
-local CATEGORY_JOB_ABILITY = 6
-local LIGHT_ARTS = 211
-local DARK_ARTS = 212
-local ADDENDUM_WHITE = 234
-local ADDENDUM_BLACK = 235
-
 -- ON JOB CHANGE
 windower.register_event('job change',function(main_job, main_job_level, sub_job, sub_job_level)
     skillchains.job_change(main_job, main_job_level)
@@ -1003,53 +1004,97 @@ windower.register_event('job change',function(main_job, main_job_level, sub_job,
     set_active_environment(default_active_environment)
 end)
 
-windower.register_event('action', function(act)
-    -- Don't swap crossbars when someone *else* uses Light/Dark Arts
+-- load the arts overlay for a gained arts buff, replacing any prior arts + addendum
+local function apply_arts_overlay(overlay)
+    if current_addendum ~= nil then
+        player:unload_ability_overlay(current_addendum)
+        current_addendum = nil
+    end
+    if current_arts ~= nil then
+        player:unload_ability_overlay(current_arts)
+    end
+    player:load_ability_overlay(overlay)
+    current_arts = overlay
+    ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+end
+
+-- load an addendum overlay on top of the active arts, replacing any prior addendum
+local function apply_addendum_overlay(overlay)
+    if current_addendum ~= nil then
+        player:unload_ability_overlay(current_addendum)
+    end
+    player:load_ability_overlay(overlay)
+    current_addendum = overlay
+    ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+end
+
+windower.register_event('gain buff', function(buff_id)
+    if buff_id == LIGHT_ARTS_BUFF then
+        apply_arts_overlay('LA')
+    elseif buff_id == DARK_ARTS_BUFF then
+        apply_arts_overlay('DA')
+    elseif buff_id == ADDENDUM_WHITE_BUFF then
+        apply_addendum_overlay('LA-AW')
+    elseif buff_id == ADDENDUM_BLACK_BUFF then
+        apply_addendum_overlay('DA-AB')
+    end
+end)
+
+windower.register_event('lose buff', function(buff_id)
+    -- only act if the lost buff matches what we currently have loaded, so a late or
+    -- out-of-order lose event cannot unload an overlay a newer gain just applied
+    if buff_id == LIGHT_ARTS_BUFF or buff_id == DARK_ARTS_BUFF then
+        local lost = (buff_id == LIGHT_ARTS_BUFF) and 'LA' or 'DA'
+        if current_arts == lost then
+            player:unload_ability_overlay(current_arts)
+            current_arts = nil
+            if current_addendum ~= nil then
+                player:unload_ability_overlay(current_addendum)
+                current_addendum = nil
+            end
+            ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+        end
+    elseif buff_id == ADDENDUM_WHITE_BUFF or buff_id == ADDENDUM_BLACK_BUFF then
+        local lost = (buff_id == ADDENDUM_WHITE_BUFF) and 'LA-AW' or 'DA-AB'
+        if current_addendum == lost then
+            player:unload_ability_overlay(current_addendum)
+            current_addendum = nil
+            ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+        end
+    end
+end)
+
+-- on load/login the gain-buff event won't fire for arts already active, so scan the
+-- player's current buffs and apply any active arts/addendum overlay
+function apply_active_arts_overlays()
     local windower_player = windower.ffxi.get_player()
-    if (windower_player == nil or act.actor_id ~= windower_player.id) then
+    if windower_player == nil or windower_player.buffs == nil then
         return
     end
 
-    if (act.category == CATEGORY_JOB_ABILITY and act.param == LIGHT_ARTS) then
-        -- switching arts invalidates any active addendum, so unload it first
-        if (current_addendum ~= nil) then
-            player:unload_ability_overlay(current_addendum)
-        end
-        if (current_arts ~= nil) then
-            player:unload_ability_overlay(current_arts)
-        end
-        current_addendum = nil
+    local active = {}
+    for _, buff_id in ipairs(windower_player.buffs) do
+        active[buff_id] = true
+    end
+
+    if active[LIGHT_ARTS_BUFF] then
         player:load_ability_overlay('LA')
         current_arts = 'LA'
-        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == DARK_ARTS) then
-        -- switching arts invalidates any active addendum, so unload it first
-        if (current_addendum ~= nil) then
-            player:unload_ability_overlay(current_addendum)
-        end
-        if (current_arts ~= nil) then
-            player:unload_ability_overlay(current_arts)
-        end
-        current_addendum = nil
+    elseif active[DARK_ARTS_BUFF] then
         player:load_ability_overlay('DA')
         current_arts = 'DA'
-        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == ADDENDUM_WHITE) then
-        if (current_addendum ~= nil) then
-            player:unload_ability_overlay(current_addendum)
-        end
+    end
+
+    if active[ADDENDUM_WHITE_BUFF] then
         player:load_ability_overlay('LA-AW')
         current_addendum = 'LA-AW'
-        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == ADDENDUM_BLACK) then
-        if (current_addendum ~= nil) then
-            player:unload_ability_overlay(current_addendum)
-        end
+    elseif active[ADDENDUM_BLACK_BUFF] then
         player:load_ability_overlay('DA-AB')
         current_addendum = 'DA-AB'
-        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
     end
-end)
+
+    ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+end
 
 windower.register_event('incoming chunk', function(id, data)
     skillchains.incoming_chunk(id, data)
