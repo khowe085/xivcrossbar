@@ -167,7 +167,7 @@ function action_binder:setup(buttonmapping, save_binding_func, delete_binding_fu
     self.title = self:create_text('Select Action Type', base_x + 50, base_y + 30)
     self.title:size(18)
     self.title:hide()
-    self.subtitle = self:create_text('', base_x + 50, base_y + 52)
+    self.subtitle = self:create_text('', base_x + 50, base_y + 70)
     self.subtitle:size(13)
     self.subtitle:hide()
     self.base_x = base_x or 150
