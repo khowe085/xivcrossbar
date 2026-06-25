@@ -27,17 +27,21 @@ Hotbar File Hierarchy & Light/Dark Arts Overlays:
 
     The merge happens slot-by-slot. When the same set name shows up in more than one file, a higher-priority file fills only the slots it actually defines, and any slot it leaves empty falls through to the lower-priority file. So you can define your common actions once in a broad file (like ALL-JOBS-DEFAULT.xml) and let the job/subjob files fill in just the slots that differ - no need to redefine a whole set for every combo. A set that only exists in one file just appears on its own.
 
-    Light Arts / Dark Arts overlays:
+    Light Arts / Dark Arts and Addendum overlays:
 
-        You can also make optional overlay files named {MAINJOB}-{SUBJOB}-lightarts.xml and {MAINJOB}-{SUBJOB}-darkarts.xml (e.g. RDM-SCH-lightarts.xml). When you activate Light Arts or Dark Arts in-game - by any means, gamepad, hotbar, or the /ja command - the matching overlay file gets layered on top of your current sets and merges slot-by-slot just like the others. Switching arts swaps the overlay; changing job or subjob clears it. If the overlay file doesn't exist, nothing happens - it's entirely optional and safe to omit. Only Light Arts and Dark Arts are supported as overlays.
+        You can also make optional overlay files named {MAINJOB}-{SUBJOB}-LA.xml (Light Arts) and {MAINJOB}-{SUBJOB}-DA.xml (Dark Arts) (e.g. RDM-SCH-LA.xml). When you activate Light Arts or Dark Arts in-game - by any means, gamepad, hotbar, or the /ja command - the matching overlay file gets layered on top of your current sets and merges slot-by-slot just like the others. Switching arts swaps the overlay; changing job or subjob clears it. If the overlay file doesn't exist, nothing happens - it's entirely optional and safe to omit.
 
-    In-game editing lands in the JOB-DEFAULT file:
+        Scholar can stack a second overlay on top of the active arts: {MAINJOB}-{SUBJOB}-LA-AW.xml layers on when you use Addendum: White (over Light Arts), and {MAINJOB}-{SUBJOB}-DA-AB.xml layers on when you use Addendum: Black (over Dark Arts). These sit above the arts overlay in priority; switching arts clears the addendum overlay along with it.
 
-        Every edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is written to {MAINJOB}-DEFAULT.xml - the job-default file. That file is created automatically the first time you log in on a job that doesn't have one yet, so it always exists for you to build on.
+    In-game editing and the edit target:
 
-        ALL-JOBS-DEFAULT.xml, the {MAINJOB}-{SUBJOB}.xml files, and the Light/Dark Arts overlays are meant to be made and edited by hand in a text editor - the in-game editor never writes them. When one of those is missing, a default set is still built in memory so it shows up in the editor; it just isn't written to disk.
+        By default, every edit you make through the in-game editor (adding, moving, deleting, re-aliasing, or re-iconing a slot) is written to {MAINJOB}-DEFAULT.xml - the job-default file. If that file doesn't exist yet, it is created on your first edit - nothing is written to disk just from loading the addon or logging in.
 
-        One thing to keep in mind: because in-game edits always land in the job-default file - which sits below the job/subjob file and the arts overlays in priority - if you hand-define the same slot in {MAINJOB}-{SUBJOB}.xml or in a Light/Dark Arts file, that higher-priority file wins in the merged view and your in-game edit to that slot won't show. Edit it in the file that defines it. Likewise, deleting a slot in-game only clears the job-default copy; a copy defined in a broader hand-made file reappears on the next merge.
+        You can change where edits land with the "Select Edit Target" option in the action binder menu (the same menu you use to assign actions). It lets you point your edits at any layer: All Jobs Default, Job Default, Job + Sub Default, the Light/Dark Arts overlays, or the Addendum: White/Black overlays. If the target file doesn't exist yet, it is created on your first edit there. The selected target resets back to Job Default on reload and on every job change.
+
+        ALL-JOBS-DEFAULT.xml, the {MAINJOB}-{SUBJOB}.xml files, and the arts/addendum overlays can still be made and edited by hand in a text editor. The in-game editor now writes them too, but only when you point the edit target at that layer. When one of those is missing, a default set is still built in memory so it shows up in the editor; it just isn't written to disk until you edit it with that layer selected.
+
+        One thing to keep in mind: because in-game edits land in the job-default file by default - which sits below the job/subjob file and the arts overlays in priority - if you hand-define the same slot in {MAINJOB}-{SUBJOB}.xml or in an arts/addendum file, that higher-priority file wins in the merged view and your in-game edit to that slot won't show. Either edit it in the file that defines it, or switch the edit target to that layer. Likewise, deleting a slot only clears the copy in the currently selected target; a copy defined in a higher-priority file reappears on the next merge.
 
 Controller changes:
 

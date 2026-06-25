@@ -84,6 +84,12 @@ gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
 local current_arts = nil
+local current_addendum = nil
+-- Scholar arts/addendum are identified by the STATUS (buff) id they grant
+local LIGHT_ARTS_BUFF     = 358
+local DARK_ARTS_BUFF      = 359
+local ADDENDUM_WHITE_BUFF = 401
+local ADDENDUM_BLACK_BUFF = 402
 local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
@@ -149,6 +155,18 @@ function get_crossbar_sets()
     return player:get_crossbar_names()
 end
 
+function set_edit_target(level_index)
+    player:set_edit_target(level_index)
+end
+
+function get_edit_target()
+    return player:get_edit_target()
+end
+
+function get_edit_target_filename()
+    return player:get_edit_target_filename()
+end
+
 function start_controller_wrappers()
 	if (settings.autohotkey == 'enabled') then
 		-- only one of these is ever needed at a time, but there's no harm in running both
@@ -181,7 +199,7 @@ function initialize()
 
     if (buttonmapping.validate()) then
         theme_options.button_layout = buttonmapping.button_layout
-        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     else
         theme_options.button_layout = 'nintendo'
         local temp_buttonmapping = {}
@@ -191,7 +209,7 @@ function initialize()
         theme_options.activewindow_button = 'x'
         gamepad_mapper:setup(buttonmapping, start_controller_wrappers, theme_options, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
         gamepad_mapper:show(true)
-        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     end
 
     player:initialize(windower_player, server, theme_options, enchanted_items)
@@ -218,6 +236,8 @@ function initialize()
 
     xivcrossbar.ready = true
     xivcrossbar.initialized = true
+
+    sync_arts_overlays()
 end
 
 -- trigger hotbar action
@@ -246,11 +266,16 @@ end
 -- reload hotbar
 function reload_hotbar()
     player:load_hotbar()
-    -- load_hotbar rebuilds the static levels and drops any arts overlay; re-apply
-    -- the active overlay so in-game edits don't silently lose Light/Dark Arts.
-    -- On a job change current_arts is cleared first, so nothing is re-applied.
+    -- load_hotbar rebuilds the static levels and drops any arts/addendum overlays;
+    -- re-apply the active overlays so in-game edits don't silently lose Light/Dark Arts
+    -- or the active addendum. Arts must be re-applied before the addendum, which stacks
+    -- above it. On a job change current_arts/current_addendum are cleared first, so
+    -- nothing is re-applied.
     if current_arts then
         player:load_ability_overlay(current_arts)
+    end
+    if current_addendum then
+        player:load_ability_overlay(current_addendum)
     end
     ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
 end
@@ -967,42 +992,80 @@ windower.register_event('status change', function(new_status_id)
     end
 end)
 
-local CATEGORY_JOB_ABILITY = 6
-local LIGHT_ARTS = 211
-local DARK_ARTS = 212
-
 -- ON JOB CHANGE
 windower.register_event('job change',function(main_job, main_job_level, sub_job, sub_job_level)
     skillchains.job_change(main_job, main_job_level)
     player:update_jobs(resources.jobs[main_job].ens, resources.jobs[sub_job].ens)
     current_arts = nil
+    current_addendum = nil
     player:unload_all_overlays()
     reload_hotbar()
     local default_active_environment = env_chooser:get_default_active_environment(player.hotbar)
     set_active_environment(default_active_environment)
 end)
 
-windower.register_event('action', function(act)
-    -- Don't swap crossbars when someone *else* uses Light/Dark Arts
+-- Reconcile the loaded arts/addendum overlays to match the player's CURRENT buffs.
+-- Driven off the authoritative buff list (not gain/lose deltas) so spurious or
+-- out-of-order buff events can't desync the overlays -- e.g. using an Addendum makes
+-- FFXI re-evaluate the arts status and fire a spurious arts 'lose buff', which must
+-- NOT drop the underlying Light/Dark Arts overlay while arts is still active.
+function sync_arts_overlays()
     local windower_player = windower.ffxi.get_player()
-    if (windower_player == nil or act.actor_id ~= windower_player.id) then
+    if windower_player == nil or windower_player.buffs == nil then
         return
     end
 
-    if (act.category == CATEGORY_JOB_ABILITY and act.param == LIGHT_ARTS) then
-        if (current_arts ~= nil) then
-            player:unload_ability_overlay(current_arts)
-        end
-        player:load_ability_overlay('lightarts')
-        current_arts = 'lightarts'
-        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
-    elseif (act.category == CATEGORY_JOB_ABILITY and act.param == DARK_ARTS) then
-        if (current_arts ~= nil) then
-            player:unload_ability_overlay(current_arts)
-        end
-        player:load_ability_overlay('darkarts')
-        current_arts = 'darkarts'
-        ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+    local active = {}
+    for _, buff_id in ipairs(windower_player.buffs) do
+        active[buff_id] = true
+    end
+
+    local arts = nil
+    if active[LIGHT_ARTS_BUFF] or active[ADDENDUM_WHITE_BUFF] then
+        arts = 'LA'
+    elseif active[DARK_ARTS_BUFF] or active[ADDENDUM_BLACK_BUFF] then
+        arts = 'DA'
+    end
+
+    local addendum = nil
+    if active[ADDENDUM_WHITE_BUFF] then
+        addendum = 'LA-AW'
+    elseif active[ADDENDUM_BLACK_BUFF] then
+        addendum = 'DA-AB'
+    end
+
+    -- nothing changed -> avoid a needless overlay rebuild/flicker
+    if arts == current_arts and addendum == current_addendum then
+        return
+    end
+
+    player:unload_all_overlays()
+    current_arts = nil
+    current_addendum = nil
+
+    if arts ~= nil then
+        player:load_ability_overlay(arts)        -- arts first (lower priority)
+        current_arts = arts
+    end
+    if addendum ~= nil then
+        player:load_ability_overlay(addendum)    -- addendum stacks on top
+        current_addendum = addendum
+    end
+
+    ui:load_player_hotbar(player.hotbar, player.vitals, player.hotbar_settings.active_environment, gamepad_state)
+end
+
+windower.register_event('gain buff', function(buff_id)
+    if buff_id == LIGHT_ARTS_BUFF or buff_id == DARK_ARTS_BUFF
+        or buff_id == ADDENDUM_WHITE_BUFF or buff_id == ADDENDUM_BLACK_BUFF then
+        sync_arts_overlays()
+    end
+end)
+
+windower.register_event('lose buff', function(buff_id)
+    if buff_id == LIGHT_ARTS_BUFF or buff_id == DARK_ARTS_BUFF
+        or buff_id == ADDENDUM_WHITE_BUFF or buff_id == ADDENDUM_BLACK_BUFF then
+        sync_arts_overlays()
     end
 end)
 
