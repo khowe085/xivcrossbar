@@ -148,7 +148,7 @@ local SPELL_TYPE_LOOKUP = {
     ['SummonerPact'] = 'summoning magic',
 }
 
-function action_binder:setup(buttonmapping, save_binding_func, delete_binding_func, theme_options, get_crossbar_sets_func, set_edit_target_func, get_edit_target_func, base_x, base_y, max_width, max_height)
+function action_binder:setup(buttonmapping, save_binding_func, delete_binding_func, theme_options, get_crossbar_sets_func, set_edit_target_func, get_edit_target_func, get_edit_target_filename_func, base_x, base_y, max_width, max_height)
     self.button_layout = buttonmapping.button_layout
     self.confirm_button = buttonmapping.confirm_button
     self.cancel_button = buttonmapping.cancel_button
@@ -159,6 +159,7 @@ function action_binder:setup(buttonmapping, save_binding_func, delete_binding_fu
     self.get_crossbar_sets_binding = get_crossbar_sets_func
     self.set_edit_target_binding = set_edit_target_func
     self.get_edit_target_binding = get_edit_target_func
+    self.get_edit_target_filename_binding = get_edit_target_filename_func
     self.is_hidden = true
     self.selector = require('ui/selectablelist')
     self.selector:setup(theme_options, base_x + 50, base_y + 75, max_width - 100, max_height - 175)
@@ -166,6 +167,9 @@ function action_binder:setup(buttonmapping, save_binding_func, delete_binding_fu
     self.title = self:create_text('Select Action Type', base_x + 50, base_y + 30)
     self.title:size(18)
     self.title:hide()
+    self.subtitle = self:create_text('', base_x + 50, base_y + 52)
+    self.subtitle:size(13)
+    self.subtitle:hide()
     self.base_x = base_x or 150
     self.base_y = base_y or 150
     self.width =  max_width or (windower.get_windower_settings().ui_x_res - 300)
@@ -756,6 +760,7 @@ function action_binder:hide()
     windower.prim.set_visibility('dialog_bg', false)
     windower.prim.set_visibility('button_entry_bg', false)
     self.title:hide()
+    self.subtitle:hide()
     self.selector:hide()
     for i, image in ipairs(self.images) do
         image:hide()
@@ -779,6 +784,7 @@ end
 function action_binder:display_action_type_selector()
     self.title:text('Select Action Type')
     self.title:show()
+    self.subtitle:hide()
 
     local player = windower.ffxi.get_player()
     local main_job = player.main_job
@@ -848,7 +854,7 @@ function action_binder:display_action_type_selector()
     action_type_list:append({id = action_types.LAST_SYNTH, name = 'Repeat Last Synth', icon = 'images/' ..get_icon_pathbase() .. '/synth.png'})
     action_type_list:append({id = action_types.SWITCH_CROSSBARS, name = 'Switch Crossbars', icon = 'images/' ..get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout .. '.png'})
     action_type_list:append({id = action_types.MOVE_CROSSBARS, name = 'Move Crossbar', icon = 'images/' ..get_icon_pathbase() .. '/ui/dpad_' .. self.button_layout .. '.png'})
-    action_type_list:append({id = action_types.SELECT_EDIT_FILE, name = 'Select Edit Target', icon = 'images/' ..get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout .. '.png'})
+    action_type_list:append({id = action_types.SELECT_EDIT_FILE, name = 'Select Edit Target', icon = 'images/' .. get_icon_pathbase() .. '/abilities/book_white.png'})
     action_type_list:append({id = action_types.SHOW_CREDITS, name = 'XIVCrossbar Credits', icon = 'images/credit_avatars/xiv.png'})
     self.selector:display_options(action_type_list)
 
@@ -860,16 +866,29 @@ function action_binder:display_edit_file_selector()
     self.title:show()
 
     local current = self.get_edit_target_binding()
-    local icon_path = get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout
+    local labels = {
+        [1] = 'All Jobs Default',
+        [2] = 'Job Default',
+        [3] = 'Job + Sub Default',
+        [4] = 'Light Arts',
+        [5] = 'Dark Arts',
+        [6] = 'Addendum: White',
+        [7] = 'Addendum: Black',
+    }
+
+    self.subtitle:text('Active: ' .. (labels[current] or '?'))
+    self.subtitle:show()
+
+    local icon = 'images/' .. get_icon_pathbase() .. '/abilities/book_white.png'
 
     local options = L{
-        {id = 1, name = 'All Jobs Default' ..   (current == 1 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
-        {id = 2, name = 'Job Default' ..         (current == 2 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
-        {id = 3, name = 'Job + Sub Default' ..   (current == 3 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
-        {id = 4, name = 'Light Arts' ..          (current == 4 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
-        {id = 5, name = 'Dark Arts' ..           (current == 5 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
-        {id = 6, name = 'Addendum: White' ..     (current == 6 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
-        {id = 7, name = 'Addendum: Black' ..     (current == 7 and ' (active)' or ''), icon = 'images/' .. icon_path .. '.png', data = {}},
+        {id = 1, name = labels[1], icon = icon, data = {}},
+        {id = 2, name = labels[2], icon = icon, data = {}},
+        {id = 3, name = labels[3], icon = icon, data = {}},
+        {id = 4, name = labels[4], icon = icon, data = {}},
+        {id = 5, name = labels[5], icon = icon, data = {}},
+        {id = 6, name = labels[6], icon = icon, data = {}},
+        {id = 7, name = labels[7], icon = icon, data = {}},
     }
 
     self.selector:display_options(options)
@@ -1249,6 +1268,16 @@ function action_binder:show_control_hints(confirm, go_back)
     local x2 = self.base_x + self.width - 250
 
     self:show_exit_hint()
+
+    -- best-effort position left of the Confirm hint; exact pixel offset may need in-game tuning
+    if (self.get_edit_target_filename_binding ~= nil) then
+        local filename = self.get_edit_target_filename_binding()
+        if (filename ~= nil) then
+            local label = self:create_text('Editing: ' .. filename, x2 - 230, y + 10)
+            label:size(13)
+            self.hints:append(label)
+        end
+    end
 
     if (self.button_layout == 'gamecube') then
         if (self.confirm_button == 'a') then

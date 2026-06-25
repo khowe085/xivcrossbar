@@ -450,6 +450,20 @@ function player:get_edit_target()
     return self.edit_target_level
 end
 
+-- basename of the file the current edit target writes to (for display)
+function player:get_edit_target_filename()
+    local id = self.edit_target_level
+    if id == 1 then
+        return 'ALL-JOBS-DEFAULT.xml'
+    elseif id == 2 then
+        return self.main_job .. '-DEFAULT.xml'
+    elseif id == 3 then
+        return storage.filename .. '.xml'
+    else
+        return storage.filename .. '-' .. self.edit_target_overlay_name .. '.xml'
+    end
+end
+
 -- find an ability overlay level by name; load it from file if not in memory, and if
 -- the file does not exist yet create an empty in-memory level (the first edit then
 -- creates the XML on save). Returns the overlay's index in hotbar_levels.

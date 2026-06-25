@@ -158,6 +158,10 @@ function get_edit_target()
     return player:get_edit_target()
 end
 
+function get_edit_target_filename()
+    return player:get_edit_target_filename()
+end
+
 function start_controller_wrappers()
 	if (settings.autohotkey == 'enabled') then
 		-- only one of these is ever needed at a time, but there's no harm in running both
@@ -190,7 +194,7 @@ function initialize()
 
     if (buttonmapping.validate()) then
         theme_options.button_layout = buttonmapping.button_layout
-        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     else
         theme_options.button_layout = 'nintendo'
         local temp_buttonmapping = {}
@@ -200,7 +204,7 @@ function initialize()
         theme_options.activewindow_button = 'x'
         gamepad_mapper:setup(buttonmapping, start_controller_wrappers, theme_options, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
         gamepad_mapper:show(true)
-        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     end
 
     player:initialize(windower_player, server, theme_options, enchanted_items)
