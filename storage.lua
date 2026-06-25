@@ -72,8 +72,9 @@ local function sorted_keys(t)
     return nums, strs
 end
 
--- recursively serialize a Lua value into source text. Tables use ['key'] for
--- string keys and [n] for numeric keys; empty tables render as {}.
+-- recursively serialize a Lua value into source text. Tables use bare identifier
+-- keys where valid, ['key'] for keys with hyphens or other special chars, and
+-- [n] for numeric keys; empty tables render as {}.
 local function serialize_value(v, indent)
     local tv = type(v)
     if tv == 'string' then
@@ -91,7 +92,8 @@ local function serialize_value(v, indent)
             parts[#parts + 1] = child .. '[' .. k .. '] = ' .. serialize_value(v[k], child)
         end
         for _, k in ipairs(strs) do
-            parts[#parts + 1] = child .. '[' .. quote_string(k) .. '] = ' .. serialize_value(v[k], child)
+            local key = k:match('^[%a_][%w_]*$') and k or ('[' .. quote_string(k) .. ']')
+            parts[#parts + 1] = child .. key .. ' = ' .. serialize_value(v[k], child)
         end
         return '{\n' .. table.concat(parts, ',\n') .. ',\n' .. indent .. '}'
     end
