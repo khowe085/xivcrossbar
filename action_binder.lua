@@ -1770,14 +1770,12 @@ function action_binder:display_crossbar_sets_selector()
     local icon_path = get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout .. '.png'
 
     for i, crossbar_set in ipairs(self.get_crossbar_sets_binding()) do
-        if (crossbar_set ~= 'Default' and crossbar_set ~= 'Job Default' and crossbar_set ~= 'All Jobs Default') then
-            local data = {
-                target_type = {['None'] = true},
-                command = 'xb bar ' .. crossbar_set,
-                icon_path = '/ui/facebuttons_' .. self.button_layout
-            }
-            crossbar_set_list:append({id = 0, name = crossbar_set, icon = icon_path, icon_offset = icon_offset, data = data})
-        end
+        local data = {
+            target_type = {['None'] = true},
+            command = 'xb bar ' .. crossbar_set,
+            icon_path = '/ui/facebuttons_' .. self.button_layout
+        }
+        crossbar_set_list:append({id = 0, name = crossbar_set, icon = icon_path, icon_offset = icon_offset, data = data})
     end
 
     self.selector:display_options(crossbar_set_list)

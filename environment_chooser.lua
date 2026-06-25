@@ -8,12 +8,6 @@ local text_setup = {
 
 require('lists')
 
-local default_hotbars = {
-    ['default'] = true,
-    ['job-default'] = true,
-    ['all-jobs-default'] = true
-}
-
 local ADD_NEW_SET = '+ Add New Set'
 
 -- env_chooser metrics
@@ -105,12 +99,6 @@ function env_chooser:load(theme_options)
     windower.prim.set_size('menu_highlight', 290, 15)
     windower.prim.set_visibility('menu_highlight', false)
 
-    windower.prim.create('tooltip_background')
-    windower.prim.set_color('tooltip_background', 150, 0, 0, 0)
-    windower.prim.set_position('tooltip_background', self:get_name_x(1) - 10, self:get_name_y(4) - 10)
-    windower.prim.set_size('tooltip_background', 290, 15)
-    windower.prim.set_visibility('tooltip_background', false)
-
     self.environments = {}
     for i=1,30,1 do
         self.environments[i] = {}
@@ -118,11 +106,6 @@ function env_chooser:load(theme_options)
         setup_text(self.environments[i].name_text, theme_options)
         self.environments[i].name_text:hide()
     end
-
-    self.tooltip = {}
-    self.tooltip = texts.new(text_setup)
-    setup_text(self.tooltip, theme_options)
-    self.tooltip:hide()
 end
 
 -- setup positions and dimensions for env_chooser
@@ -148,50 +131,21 @@ function env_chooser:get_default_active_environment(player_hotbar)
     end
     names:sort()
     for i, name in ipairs(names) do
-        if (not default_hotbars[kebab_casify(name)]) then
-            return name
-        end
+        return name
     end
 end
 
 function env_chooser:get_player_environments(player_hotbar)
     local environments = L{}
-    local non_defaults = L{}
-    local default = nil
-    local job_default = nil
-    local all_jobs_default = nil
 
     for environment_name, environment in pairs(player_hotbar) do
         if (environment.name == nil) then
             environment.name = environment_name
         end
-        local kebab_name = kebab_casify(environment_name)
-        if (not default_hotbars[kebab_name]) then
-            non_defaults:append(environment)
-        elseif (kebab_name == 'default') then
-            default = environment
-        elseif (kebab_name == 'job-default') then
-            job_default = environment
-        elseif (kebab_name == 'all-jobs-default') then
-            all_jobs_default = environment
-        end
+        environments:append(environment)
     end
 
-    non_defaults:sort(sortByName)
-
-    if (all_jobs_default ~= nil) then
-        environments:append(all_jobs_default)
-    end
-    if (job_default ~= nil) then
-        environments:append(job_default)
-    end
-    if (default ~= nil) then
-        environments:append(default)
-    end
-
-    for i, environment in ipairs(non_defaults) do
-       environments:append(environment) 
-    end
+    environments:sort(sortByName)
 
     environments:append({['name'] = ADD_NEW_SET})
 
@@ -200,48 +154,6 @@ end
 
 local HIDDEN_SPACE = "​" -- Invisible character for color formatting
 local HAIRLINE = " "
-
-function env_chooser:maybe_show_default_sets_tooltip(name, env_count)
-    if (default_hotbars[kebab_casify(name)]) then
-        windower.prim.set_position('tooltip_background', self:get_name_x(index) + 200, self.pos_y - 295)
-        windower.prim.set_size('tooltip_background', 400, 218)
-        windower.prim.set_visibility('tooltip_background', true)
-        local paragraph_1 = 'When an empty space is encountered, we check the same slot\nin the default sets and use the first non-empty action we find.\nWe search in the following order:'
-        local paragraph_2 = '                  Default → Job Default → All Jobs Default'
-        local paragraph_3 = ''
-        local paragraph_4 = 'Defaults are useful for adding actions to multiple crossbar sets,\nbut you shouldn\'t use them directly in gameplay--only to add\nbindings.\\cs(0,255,128)' .. HIDDEN_SPACE .. ' This tip will hide when you change to a different set.'
-        if (kebab_casify(name) == 'all-jobs-default') then
-            paragraph_2 = '                  Default → Job Default → \\cs(0,128,255)' .. HIDDEN_SPACE .. 'All Jobs Default\\cs(255,255,255)' .. HIDDEN_SPACE
-            paragraph_3 = '\\cs(0,128,255)' .. HIDDEN_SPACE .. 'All Jobs Default\\cs(255,255,255)' .. HIDDEN_SPACE .. ' applies to all jobs, and is mainly useful to call\nTrusts or Mounts, send commands to 2-boxed alts, and so\nforth.'
-        elseif (kebab_casify(name) == 'job-default') then
-            paragraph_2 = '                  Default → \\cs(0,128,255)' .. HIDDEN_SPACE .. 'Job Default\\cs(255,255,255)' .. HIDDEN_SPACE .. ' → All Jobs Default'
-            paragraph_3 = '\\cs(0,128,255)' .. HIDDEN_SPACE .. 'Job Default\\cs(255,255,255)' .. HIDDEN_SPACE .. ' applies to your current job, regardless of subjob,\nand is useful for main job abilities you always want on that\njob\'s crossbars.'
-        elseif (kebab_casify(name) == 'default') then
-            paragraph_2 = '                  \\cs(0,128,255)' .. HIDDEN_SPACE .. 'Default\\cs(255,255,255)' .. HIDDEN_SPACE .. ' → Job Default → All Jobs Default'
-            paragraph_3 = '\\cs(0,128,255)' .. HIDDEN_SPACE .. 'Default\\cs(255,255,255)' .. HIDDEN_SPACE .. ' only applies to your current job + subjob combination\nand is mainly useful if you want to have the same abilities in\nseveral crossbar sets for that job + subjob combination.'
-        end
-
-        self.tooltip:text(paragraph_1 .. '\n\n' .. paragraph_2 .. '\n\n' .. paragraph_3 .. '\n\n' .. paragraph_4)
-        self.tooltip:size(10)
-        self.tooltip:pos(self:get_name_x(index) + 210, self.pos_y - 290)
-        self.tooltip:show()
-    else
-        windower.prim.set_visibility('tooltip_background', false)
-        self.tooltip:hide()
-    end
-end
-
-function env_chooser:temp_hide_default_sets_tooltip()
-    windower.prim.set_visibility('tooltip_background', false)
-    self.tooltip:hide()
-end
-
-function env_chooser:maybe_unhide_default_sets_tooltip()
-    if (default_hotbars[kebab_casify(self.current_environment)]) then
-        windower.prim.set_visibility('tooltip_background', true)
-        self.tooltip:show()
-    end
-end
 
 function env_chooser:show_player_environments(player_hotbar, current_environment)
     self.current_environment = current_environment
@@ -252,9 +164,7 @@ function env_chooser:show_player_environments(player_hotbar, current_environment
 
     for i, environment in ipairs(environments) do
         local index = (#environments - i) + 1 -- put first environment at the top instead of bottom
-        if (default_hotbars[kebab_casify(environment.name)]) then
-            self.environments[index].name_text:text(HAIRLINE .. '\\cs(0,128,255)' .. HIDDEN_SPACE .. environment.name)
-        elseif (environment.name == ADD_NEW_SET) then
+        if (environment.name == ADD_NEW_SET) then
             self.environments[index].name_text:text(HAIRLINE .. '\\cs(0,255,128)' .. HIDDEN_SPACE .. environment.name)
             self.indexof_add_new_set = index
         else
@@ -263,7 +173,6 @@ function env_chooser:show_player_environments(player_hotbar, current_environment
         self.environments[index].name_text:pos(self:get_name_x(index), self:get_name_y(index))
         self.environments[index].name_text:show()
         if (kebab_casify(environment.name) == current_environment) then
-            self:maybe_show_default_sets_tooltip(environment.name, #environments)
             windower.prim.set_position('menu_highlight', self:get_name_x(index) - 10, self:get_name_y(index) - 2)
         end
     end
@@ -329,10 +238,6 @@ end
 
 function env_chooser:validate_new_set_name()
     local new_name = kebab_casify(self.new_set_name)
-    if (new_name == 'default' or new_name == 'job-default' or new_name == 'all-jobs-default') then
-        return false
-    end
-
     for i, environment in pairs(env_chooser.environments) do
         if (new_name == kebab_casify(environment.name)) then
             return false

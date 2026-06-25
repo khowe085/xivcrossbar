@@ -761,12 +761,10 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         if (action_binder.is_hidden) then
             action_binder:show()
             ui:hide_button_hints()
-            env_chooser:temp_hide_default_sets_tooltip()
         else
             action_binder:hide()
             action_binder:reset_state()
             ui:maybe_show_button_hints()
-            env_chooser:maybe_unhide_default_sets_tooltip()
         end
         return true
     end

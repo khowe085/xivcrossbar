@@ -517,7 +517,7 @@ function ui:show(player_hotbar, environment)
             local action = player_hotbar[environment]['hotbar_' .. h]['slot_' .. slot]
 
             if (action == nil or action.action == nil) then
-                action = maybe_get_default_action(player_hotbar, environment, h, slot)
+                action = nil
             end
 
             if self.theme.hide_empty_slots == false then self.hotbars[h].slot_background[i]:show() end
@@ -630,20 +630,15 @@ function ui:load_action(player_hotbar, environment, hotbar, slot, action, player
 
     local icon_overridden = false
 
-    -- if slot is empty, check if there is an entry in the default crossbar
+    -- if slot is empty, hide it (or show empty background per theme)
     if (action == nil or action.action == nil) then
-        action = maybe_get_default_action(player_hotbar, environment, hotbar, slot)
-
-        -- if default crossbar slot is empty, then hide the slot
-        if (action == nil) then
-            if self.theme.hide_empty_slots == true then
-                self.hotbars[hotbar].slot_background[slot]:hide()
-            else
-                self.hotbars[hotbar].slot_background[slot]:show()
-            end
-
-            return
+        if self.theme.hide_empty_slots == true then
+            self.hotbars[hotbar].slot_background[slot]:hide()
+        else
+            self.hotbars[hotbar].slot_background[slot]:show()
         end
+
+        return
     end
 
     local icon_path = nil
@@ -823,9 +818,8 @@ function ui:check_vitals(player_hotbar, player_vitals, environment)
 
             local action = player_hotbar[environment]['hotbar_' .. h]['slot_' .. slot]
 
-            -- use the default action if this slot is otherwise empty
             if (action == nil or action.action == nil) then
-                action = maybe_get_default_action(player_hotbar, environment, h, slot)
+                action = nil
             end
 
             if action ~= nil then
@@ -923,18 +917,6 @@ end
 
 local last_log = os.clock()
 
-function ui:mark_default_set_action(h, i, environment)
-    if (environment ~= nil) then
-        self.hotbars[h].slot_recast[i]:path(windower.addon_path .. '/images/' .. get_icon_pathbase() .. '/ui/' .. environment ..'.png')
-        self.hotbars[h].slot_recast[i]:alpha(255)
-        self.hotbars[h].slot_recast[i]:size(40, 40)
-        self.hotbars[h].slot_recast[i]:pos(self:get_slot_x(h, i), self:get_slot_y(h, i))
-        self.hotbars[h].slot_recast[i]:show()
-        self.hotbars[h].slot_recast_text[i]:hide()
-        self.hotbars[h].slot_cost[i]:hide()
-    end
-end
-
 -- check action recasts
 function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gamepad_state, skillchains, consumables, dim_default_slots, in_battle)
     animation_frame_count = animation_frame_count + self.frame_skip + 1
@@ -985,7 +967,7 @@ function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gam
                 end
 
                 if (action == nil or action.action == nil) then
-                    action = maybe_get_default_action(player_hotbar, environment, h, slot)
+                    action = nil
                 end
 
                 if (action ~= nil and action.type == 'a' and action.action == 'a' and action.alias == 'Attack') then
@@ -1030,10 +1012,6 @@ function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gam
                         end
                     end
 
-                    -- Mark which actions came from a default set, if any, when the gamepad assigner is open
-                    if (action ~= nil and action.source_environment ~= environment and dim_default_slots) then
-                        self:mark_default_set_action(h, i, action.source_environment)
-                    end
                 else
                     local crossbar_action = nil
                     local skill_recasts = nil
@@ -1257,7 +1235,7 @@ function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gam
                             end
                         end
                     elseif not has_spell then
-                        if (action.source_environment == environment or not dim_default_slots) then
+                        if (not dim_default_slots) then
                             if spellsThatRequireJA:contains((action.action):lower()) then
                                 -- set up "needs JA" element
                                 self.hotbars[h].slot_recast[i]:path(windower.addon_path .. '/images/' .. get_icon_pathbase() .. '/ui/needs_job_ability.png')
@@ -1331,11 +1309,6 @@ function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gam
                         if (action.type == 'ws') then
                             self.hotbars[h].slot_cost[i]:show()
                         end
-                    end
-
-                    -- Mark which actions came from a default set, if any, when the gamepad assigner is open
-                    if (action ~= nil and action.source_environment ~= environment and dim_default_slots) then
-                        self:mark_default_set_action(h, i, action.source_environment)
                     end
                 end
             end
@@ -1487,26 +1460,6 @@ end
 -----------------------------
 function ui:maybe_use_enchanted_item(hotbar, slot)
     local action = hotbar['hotbar_' .. h]['slot_' .. slot]
-end
-
-function maybe_get_default_action(hotbar, environment, hb, slot)
-    local h = 'hotbar_' .. hb
-    local i = 'slot_' .. slot
-    local action = nil
-
-    if (environment ~= 'job-default' and environment ~= 'all-jobs-default' and
-        hotbar['default'] and hotbar['default'][h] and hotbar['default'][h][i]) then
-        action = hotbar['default'][h][i]
-        action.source_environment = 'default'
-    elseif (environment ~= 'all-jobs-default' and hotbar['job-default'] and hotbar['job-default'][h] and hotbar['job-default'][h][i]) then
-        action = hotbar['job-default'][h][i]
-        action.source_environment = 'job-default'
-    elseif (hotbar['all-jobs-default'] and hotbar['all-jobs-default'][h] and hotbar['all-jobs-default'][h][i]) then
-        action = hotbar['all-jobs-default'][h][i]
-        action.source_environment = 'all-jobs-default'
-    end
-
-    return action
 end
 
 -----------------------------
