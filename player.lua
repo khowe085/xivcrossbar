@@ -269,12 +269,12 @@ function player:create_default_hotbar()
 end
 
 -- create the fallback hotbar that applies to all subjobs of this job (the
--- {JOB}-DEFAULT section). Auto-creates a Battle environment and registers the level
+-- {JOB}-DEFAULT section). Auto-creates a General environment and registers the level
 -- in job_data eagerly so its content is persisted whenever {JOB}.lua is next written.
 function player:create_job_default_hotbar()
     local data = self.hotbar_levels[2].data
     data.sets['battle'] = {}
-    data.sets['battle']['name'] = 'Battle'
+    data.sets['battle']['name'] = 'General'
     self:setup_environment_hotbars(data.sets, 'battle')
 
     storage.job_data[storage.job_default_key] = data

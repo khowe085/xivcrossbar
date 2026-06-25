@@ -43,7 +43,7 @@ Hotbar File Layout & Light/Dark Arts Overlays:
 
     Defaults on a fresh character:
 
-        With no data files present, General.lua is auto-created with a Field environment (shared across all jobs), and the {MAINJOB}-DEFAULT section of {MAINJOB}.lua is auto-created with a Battle environment. The job/subjob section starts empty and only appears once you edit it. Nothing is written to disk just from loading the addon or logging in - files are written on your first save.
+        With no data files present, General.lua is auto-created with a Field environment (shared across all jobs), and the {MAINJOB}-DEFAULT section of {MAINJOB}.lua is auto-created with a General environment. The job/subjob section starts empty and only appears once you edit it. Nothing is written to disk just from loading the addon or logging in - files are written on your first save.
 
     In-game editing and the edit target:
 
