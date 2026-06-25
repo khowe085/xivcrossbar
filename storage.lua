@@ -30,7 +30,13 @@ local storage = {}
 
 storage.filename = ''
 storage.directory = ''
-storage.file = nil
+
+-- the {JOB}-DEFAULT section key for the current main job (e.g. 'RDM-DEFAULT')
+storage.job_default_key = ''
+
+-- in-memory cache of the whole {JOB}.lua table: section key -> level.data table.
+-- Reloaded from disk by update_filename whenever the job changes.
+storage.job_data = {}
 
 -- normalize the subjob token: no subjob (nil / '' / 'NON') -> 'NOSUB'
 local function normalize_sub(sub)
@@ -40,31 +46,135 @@ local function normalize_sub(sub)
     return sub
 end
 
+-- serialize a string value into a single-quoted Lua literal, escaping the
+-- characters that would otherwise break the literal or span lines
+local function quote_string(s)
+    s = s:gsub('\\', '\\\\')
+    s = s:gsub("'", "\\'")
+    s = s:gsub('\n', '\\n')
+    s = s:gsub('\r', '\\r')
+    return "'" .. s .. "'"
+end
+
+-- collect a table's keys in a deterministic order (numeric ascending, then
+-- string alphabetical) so serialized files are stable across saves
+local function sorted_keys(t)
+    local nums, strs = {}, {}
+    for k in pairs(t) do
+        if type(k) == 'number' then
+            nums[#nums + 1] = k
+        else
+            strs[#strs + 1] = k
+        end
+    end
+    table.sort(nums)
+    table.sort(strs)
+    return nums, strs
+end
+
+-- recursively serialize a Lua value into source text. Tables use ['key'] for
+-- string keys and [n] for numeric keys; empty tables render as {}.
+local function serialize_value(v, indent)
+    local tv = type(v)
+    if tv == 'string' then
+        return quote_string(v)
+    elseif tv == 'number' or tv == 'boolean' then
+        return tostring(v)
+    elseif tv == 'table' then
+        local nums, strs = sorted_keys(v)
+        if #nums == 0 and #strs == 0 then
+            return '{}'
+        end
+        local child = indent .. '  '
+        local parts = {}
+        for _, k in ipairs(nums) do
+            parts[#parts + 1] = child .. '[' .. k .. '] = ' .. serialize_value(v[k], child)
+        end
+        for _, k in ipairs(strs) do
+            parts[#parts + 1] = child .. '[' .. quote_string(k) .. '] = ' .. serialize_value(v[k], child)
+        end
+        return '{\n' .. table.concat(parts, ',\n') .. ',\n' .. indent .. '}'
+    end
+    -- nil / function / userdata are not expected in hotbar data; emit nil so the
+    -- file still loads rather than producing malformed source
+    return 'nil'
+end
+
+-- serialize a table to a complete Lua data file body ('return { ... }')
+local function table_to_lua(t)
+    return 'return ' .. serialize_value(t, '') .. '\n'
+end
+
+-- read a Lua data file and return the table it returns, or nil on any error
+local function load_lua_file(f)
+    if f == nil or not f:exists() then
+        return nil
+    end
+    local contents = f:read()
+    if contents == nil or contents == '' then
+        return nil
+    end
+    local chunk, err = loadstring(contents)
+    if chunk == nil then
+        windower.console.write('XIVCROSSBAR: failed to parse lua data file: ' .. tostring(err))
+        return nil
+    end
+    local ok, result = pcall(chunk)
+    if not ok or type(result) ~= 'table' then
+        windower.console.write('XIVCROSSBAR: failed to load lua data file: ' .. tostring(result))
+        return nil
+    end
+    return result
+end
+
 -- setup storage for current player
 function storage:setup(player)
     self.directory = player.server .. '/' .. player.name
     self:update_filename(player.main_job, player.sub_job)
 end
 
--- get a handle to an ability overlay file: e.g. SCH-NOSUB-LA.xml
-function storage:get_ability_file(name)
-    return file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '-' .. name .. '.xml')
-end
-
--- write a single level's environments to its file, creating the file/dir if needed
-function storage:save_level(level_data, target_file)
-    if not target_file:exists() then
-        target_file:create()
-    end
-    target_file:write(table.to_xml(level_data))
-end
-
--- update filename according to jobs
+-- update filenames + handles for the given jobs and reload the cached {JOB}.lua.
+-- job_data is the source of truth for every {JOB}.lua section while this job is active.
 function storage:update_filename(main, sub)
     self.filename = main .. '-' .. normalize_sub(sub)
-    self.file = file.new('data/hotbar/' .. self.directory .. '/' .. self.filename .. '.xml')
-    self.job_default_file = file.new('data/hotbar/' .. self.directory .. '/' .. main .. '-DEFAULT.xml')
-    self.all_jobs_file = file.new('data/hotbar/' .. self.directory .. '/ALL-JOBS-DEFAULT.xml')
+    self.job_default_key = main .. '-DEFAULT'
+    self.all_jobs_file = file.new('data/hotbar/' .. self.directory .. '/General.lua')
+    self.job_file = file.new('data/hotbar/' .. self.directory .. '/' .. main .. '.lua')
+    self.job_data = load_lua_file(self.job_file) or {}
+end
+
+-- return the all-jobs (General.lua) data table, or nil if absent/invalid
+function storage:load_all_jobs()
+    return load_lua_file(self.all_jobs_file)
+end
+
+-- return the cached {JOB}.lua section for a combo key (may be nil)
+function storage:get_job_section(combo)
+    return self.job_data[combo]
+end
+
+-- register a transient section table into job_data on its first edit; noop if the
+-- section is already present so the live in-memory reference is preserved
+function storage:anchor_job_section(combo, data)
+    if self.job_data[combo] == nil then
+        self.job_data[combo] = data
+    end
+end
+
+-- write the all-jobs (General.lua) data, creating the file/dir if needed
+function storage:save_all_jobs(data)
+    if not self.all_jobs_file:exists() then
+        self.all_jobs_file:create()
+    end
+    self.all_jobs_file:write(table_to_lua(data))
+end
+
+-- write the entire {JOB}.lua table (all cached sections), creating the file/dir if needed
+function storage:save_job_file()
+    if not self.job_file:exists() then
+        self.job_file:create()
+    end
+    self.job_file:write(table_to_lua(self.job_data))
 end
 
 return storage
