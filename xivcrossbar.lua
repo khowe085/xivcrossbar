@@ -604,6 +604,7 @@ windower.register_event('addon command', function(command, ...)
         return reload_hotbar()
 
     elseif command == 'bar' or command == 'crossbar' or command == 'hotbar' then
+        cycle_stack = {}
         switch_crossbars_command(args)
     elseif command == 'set' then
         set_action_command(args)
@@ -620,9 +621,11 @@ windower.register_event('addon command', function(command, ...)
     elseif command == 'n' or command == 'new' then
         new_environment_command(args)
     elseif command == 'next' then
+        cycle_stack = {}
         local next_environment = env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment)
         set_active_environment(next_environment)
     elseif command == 'prev' then
+        cycle_stack = {}
         local prev_environment = env_chooser:get_next_environment(player.hotbar, player.hotbar_settings.active_environment)
         set_active_environment(prev_environment)
     elseif command == 'cycle' then
