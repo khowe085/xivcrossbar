@@ -873,6 +873,7 @@ function action_binder:display_action_type_selector()
 
     local action_type_list = L{}
     action_type_list:append({id = action_types.DELETE, name = 'Remove a Binding', icon = 'images/' ..get_icon_pathbase() .. '/ui/red-x.png'})
+    action_type_list:append({id = action_types.SWAP_SLOTS, name = 'Swap Slots', icon = 'images/' .. get_icon_pathbase() .. '/abilities/sange.png'})
     action_type_list:append({id = action_types.JOB_ABILITY, name = 'Job Ability', icon = 'images/icons/abilities/00001.png', icon_offset = 4})
     action_type_list:append({id = action_types.WEAPONSKILL, name = 'Weaponskill', icon = 'images/icons/weapons/sword.png', icon_offset = 4})
     if (pet_jobs[main_job] or pet_jobs[sub_job]) then
@@ -932,7 +933,6 @@ function action_binder:display_action_type_selector()
     action_type_list:append({id = action_types.SWITCH_CROSSBARS, name = 'Switch Crossbars', icon = 'images/' ..get_icon_pathbase() .. '/ui/facebuttons_' .. self.button_layout .. '.png'})
     action_type_list:append({id = action_types.MOVE_CROSSBARS, name = 'Move Crossbar', icon = 'images/' ..get_icon_pathbase() .. '/ui/dpad_' .. self.button_layout .. '.png'})
     action_type_list:append({id = action_types.SELECT_EDIT_FILE, name = 'Select Edit Target', icon = 'images/' .. get_icon_pathbase() .. '/abilities/book_white.png'})
-    action_type_list:append({id = action_types.SWAP_SLOTS, name = 'Swap Slots', icon = 'images/' .. get_icon_pathbase() .. '/ui/red-x.png'})
     action_type_list:append({id = action_types.SHOW_CREDITS, name = 'XIVCrossbar Credits', icon = 'images/credit_avatars/xiv.png'})
     self.selector:display_options(action_type_list)
 
@@ -1233,25 +1233,11 @@ function action_binder:display_swap_confirmer()
     local ability_y = center_y - 30
     local combo_y   = center_y + 20
 
-    -- Action names
-    local label_a = self:create_text(name_a, start_x, name_y)
-    label_a:size(13)
-    self.hints:append(label_a)
-
-    local label_b = self:create_text(name_b, tgt_start, name_y)
-    label_b:size(13)
-    self.hints:append(label_b)
-
     -- Ability icons centered over their respective combo group
     local src_center_x = start_x + (#src_combo * 40) / 2 - 16
     local tgt_center_x = tgt_start + (#tgt_combo * 40) / 2 - 16
     self:show_action_icon_abs(ability_icon_a, src_center_x, ability_y)
     self:show_action_icon_abs(ability_icon_b, tgt_center_x, ability_y)
-
-    -- Arrow between the two sides
-    local arrow = self:create_text('<->', arrow_x, ability_y + 8)
-    arrow:size(14)
-    self.hints:append(arrow)
 
     -- Button combo icons
     for i, p in ipairs(src_combo) do
@@ -1261,7 +1247,20 @@ function action_binder:display_swap_confirmer()
         self:show_icon(p, tgt_start + (i - 1) * 40, combo_y)
     end
 
+    -- show_control_hints clears self.hints; create name labels and arrow after it
     self:show_control_hints('Confirm', 'Go Back')
+
+    local label_a = self:create_text(name_a, start_x, name_y)
+    label_a:size(13)
+    self.hints:append(label_a)
+
+    local label_b = self:create_text(name_b, tgt_start, name_y)
+    label_b:size(13)
+    self.hints:append(label_b)
+
+    local arrow = self:create_text('<->', arrow_x, ability_y + 8)
+    arrow:size(14)
+    self.hints:append(arrow)
 end
 
 function action_binder:execute_swap()
