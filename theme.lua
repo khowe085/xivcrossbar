@@ -46,6 +46,14 @@ theme.apply = function (settings)
     options.skillchain_open_color_blue = settings.SkillchainIndicator.WindowOpenColor.Blue
     options.skillchain_indicator_offset_x = settings.SkillchainIndicator.OffsetX
     options.skillchain_indicator_offset_y = settings.SkillchainIndicator.OffsetY
+    options.set_display_enabled          = settings.SetDisplay.Enabled
+    options.set_display_name_font_size   = settings.SetDisplay.NameFontSize
+    options.set_display_target_font_size = settings.SetDisplay.TargetFontSize
+    options.set_display_width            = settings.SetDisplay.Width
+    options.set_display_height           = settings.SetDisplay.Height
+    options.set_display_bounding_box     = settings.SetDisplay.BoundingBox
+    options.set_display_offset_x         = settings.SetDisplay.OffsetX
+    options.set_display_offset_y         = settings.SetDisplay.OffsetY
 
     options.iconpack = settings.iconpack
     options.is_compact = settings.iscompact

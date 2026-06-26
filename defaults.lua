@@ -65,6 +65,18 @@ defaults.Hotbar.HideBattleNotice = false
 defaults.Controls = {}
 defaults.Controls.ToggleBattleMode        = 43
 defaults.Controls.LockDualTriggerToBar3   = false
+defaults.Controls.NavModeDelaySeconds     = 0.25
+defaults.Controls.SetSelectorDelaySeconds = 3.0
+
+defaults.SetDisplay = {}
+defaults.SetDisplay.Enabled         = true
+defaults.SetDisplay.NameFontSize    = 16
+defaults.SetDisplay.TargetFontSize  = 6
+defaults.SetDisplay.Width           = 105
+defaults.SetDisplay.Height          = 50
+defaults.SetDisplay.BoundingBox     = true
+defaults.SetDisplay.OffsetX         = 230
+defaults.SetDisplay.OffsetY         = 0
 
 defaults.Theme = {}
 defaults.Theme.BattleNotice = 'ffxiv'

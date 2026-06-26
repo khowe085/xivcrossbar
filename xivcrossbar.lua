@@ -96,6 +96,8 @@ local is_left_doublepress_window_open = false
 local is_right_doublepress_window_open = false
 local plus_hold_pending = false
 local plus_hold_gen = 0
+local plus_nav_mode = false
+local plus_nav_gen = 0
 
 local function close_left_doublepress_window()
     is_left_doublepress_window_open = false
@@ -159,6 +161,9 @@ end
 
 function set_edit_target(level_index)
     player:set_edit_target(level_index)
+    if ui.is_setup then
+        ui:update_set_display(player.hotbar, player.hotbar_settings.active_environment)
+    end
 end
 
 function get_edit_target()
@@ -903,6 +908,16 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         end
     end
 
+    if (gamepad_state.capturing and plus_nav_mode and not env_chooser:is_showing() and pressed) then
+        if (gamepad.is_dpad_down(dik)) then
+            windower.send_command('xb next')
+            return true
+        elseif (gamepad.is_dpad_up(dik)) then
+            windower.send_command('xb prev')
+            return true
+        end
+    end
+
     local any_trigger_down = gamepad_state.left_trigger or gamepad_state.right_trigger
     if (gamepad_state.capturing and any_trigger_down and gamepad.is_face_button_or_dpad(dik)) then
         if (pressed) then
@@ -938,13 +953,23 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
             coroutine.schedule(function()
                 if plus_hold_pending and plus_hold_gen == gen then
                     plus_hold_pending = false
-                    env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+                    plus_nav_mode = true
+                    plus_nav_gen = plus_nav_gen + 1
+                    local nav_gen = plus_nav_gen
+                    coroutine.schedule(function()
+                        if plus_nav_mode and plus_nav_gen == nav_gen then
+                            plus_nav_mode = false
+                            env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+                        end
+                    end, settings.Controls.SetSelectorDelaySeconds - settings.Controls.NavModeDelaySeconds)
                 end
-            end, 0.5)
+            end, settings.Controls.NavModeDelaySeconds)
         else
             if plus_hold_pending then
                 plus_hold_pending = false
                 windower.send_command('xb cycle')
+            elseif plus_nav_mode then
+                plus_nav_mode = false
             else
                 env_chooser:hide_player_environments()
             end

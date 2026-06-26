@@ -142,15 +142,18 @@ function env_chooser:setup_metrics(theme_options)
 end
 
 function env_chooser:get_default_active_environment(player_hotbar)
-    local names = L{}
+    local environments = L{}
     for environment_name, environment in pairs(player_hotbar) do
-        names:append(environment_name)
-    end
-    names:sort()
-    for i, name in ipairs(names) do
-        if (not default_hotbars[kebab_casify(name)]) then
-            return name
+        if (not default_hotbars[kebab_casify(environment_name)]) then
+            if (environment.name == nil) then
+                environment.name = environment_name
+            end
+            environments:append(environment)
         end
+    end
+    environments:sort(sortByOrder)
+    if (#environments > 0) then
+        return environments[1].name
     end
 end
 
