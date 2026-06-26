@@ -264,6 +264,7 @@ function ui:setup(theme_options, enchanted_items)
     self.theme.set_display_target_font_size = theme_options.set_display_target_font_size
     self.theme.set_display_width            = theme_options.set_display_width
     self.theme.set_display_height           = theme_options.set_display_height
+    self.theme.set_display_bounding_box     = theme_options.set_display_bounding_box
     self.theme.set_display_offset_x         = theme_options.set_display_offset_x
     self.theme.set_display_offset_y         = theme_options.set_display_offset_y
 
@@ -310,17 +311,36 @@ function ui:load(theme_options)
     windower.prim.set_size('skillchain_indicator', 600, 10)
     windower.prim.set_visibility('skillchain_indicator', false)
 
+    local sd_x   = self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x
+    local sd_y   = self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y
+    local sd_w   = self.theme.set_display_width
+    local sd_h   = self.theme.set_display_height
+    local sd_nfs = self.theme.set_display_name_font_size
+    local sd_tfs = self.theme.set_display_target_font_size
+
+    windower.prim.create('set_display_bg')
+    windower.prim.set_color('set_display_bg', 120, 0, 0, 0)
+    windower.prim.set_position('set_display_bg', sd_x, sd_y)
+    windower.prim.set_size('set_display_bg', sd_w, sd_h)
+    windower.prim.set_visibility('set_display_bg', false)
+
     self.set_display_name = texts.new(text_setup)
     setup_text(self.set_display_name, theme_options)
-    self.set_display_name:size(self.theme.set_display_name_font_size)
-    self.set_display_name:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y)
+    self.set_display_name:size(sd_nfs)
+    self.set_display_name:pos(
+      sd_x + math.floor(sd_w / 2),
+      sd_y + math.max(0, math.floor((sd_h / 2 - sd_nfs) / 2))
+    )
     self.set_display_name:text('')
     self.set_display_name:hide()
 
     self.set_display_target = texts.new(text_setup)
     setup_text(self.set_display_target, theme_options)
-    self.set_display_target:size(self.theme.set_display_target_font_size)
-    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + math.floor(self.theme.set_display_height / 2))
+    self.set_display_target:size(sd_tfs)
+    self.set_display_target:pos(
+      sd_x + math.floor(sd_w / 2),
+      sd_y + math.floor(sd_h / 2) + math.max(0, math.floor((sd_h / 2 - sd_tfs) / 2))
+    )
     self.set_display_target:text('')
     self.set_display_target:hide()
 
@@ -519,6 +539,7 @@ function ui:hide()
     self.bar_background_right:hide()
     if self.set_display_name then self.set_display_name:hide() end
     if self.set_display_target then self.set_display_target:hide() end
+    windower.prim.set_visibility('set_display_bg', false)
 end
 
 function ui:update_set_display(player_hotbar, environment)
@@ -526,6 +547,7 @@ function ui:update_set_display(player_hotbar, environment)
     if not self.theme.set_display_enabled then
         self.set_display_name:hide()
         self.set_display_target:hide()
+        windower.prim.set_visibility('set_display_bg', false)
         return
     end
     local env_data = player_hotbar and player_hotbar[environment]
@@ -534,6 +556,7 @@ function ui:update_set_display(player_hotbar, environment)
     self.set_display_name:show()
     self.set_display_target:text(player:get_edit_target_label() or '')
     self.set_display_target:show()
+    windower.prim.set_visibility('set_display_bg', self.theme.set_display_bounding_box == true)
 end
 
 function ui:hide_button_hints()

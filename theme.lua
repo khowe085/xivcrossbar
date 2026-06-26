@@ -51,6 +51,7 @@ theme.apply = function (settings)
     options.set_display_target_font_size = settings.SetDisplay.TargetFontSize
     options.set_display_width            = settings.SetDisplay.Width
     options.set_display_height           = settings.SetDisplay.Height
+    options.set_display_bounding_box     = settings.SetDisplay.BoundingBox
     options.set_display_offset_x         = settings.SetDisplay.OffsetX
     options.set_display_offset_y         = settings.SetDisplay.OffsetY
 
