@@ -226,8 +226,8 @@ function player:merge_levels()
             end
 
             for key, value in pairs(hotbars) do
-                if key == 'name' then
-                    self.hotbar[environment]['name'] = value
+                if key == 'name' or key == 'order' then
+                    self.hotbar[environment][key] = value
                 else
                     -- key is a hotbar_N table of slots
                     if self.hotbar[environment][key] == nil then
@@ -697,6 +697,14 @@ function player:create_new_environment(name)
                 new_environment['hotbar_' .. h]['slot_' .. i] = {}
             end
         end
+
+        local max_order = 0
+        for _, env in pairs(self.hotbar) do
+            if (env.order or 0) > max_order then
+                max_order = env.order or 0
+            end
+        end
+        new_environment['order'] = max_order + 1
 
         local idx = self:resolve_edit_level(nil, nil, nil)
         self.hotbar_levels[idx].data.sets[kebab_casify(name)] = new_environment

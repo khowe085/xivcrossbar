@@ -72,9 +72,20 @@ local function sorted_keys(t)
     return nums, strs
 end
 
--- recursively serialize a Lua value into source text. Tables use bare identifier
--- keys where valid, ['key'] for keys with hyphens or other special chars, and
--- [n] for numeric keys; empty tables render as {}.
+-- true when every value in t is a scalar (string/number/boolean) — no nested tables,
+-- no numeric keys. Used to decide whether to serialize a table inline.
+local function is_flat(t)
+    for _, v in pairs(t) do
+        if type(v) == 'table' then return false end
+    end
+    return true
+end
+
+-- recursively serialize a Lua value into source text.
+-- * Empty tables render as {}.
+-- * Tables whose values are all scalars (slot action tables) render on one line.
+-- * Tables that have a 'name' key (environment tables) emit 'name' then 'order' first.
+-- * All other tables use sorted keys (numeric ascending, then string alphabetical).
 local function serialize_value(v, indent)
     local tv = type(v)
     if tv == 'string' then
@@ -86,12 +97,36 @@ local function serialize_value(v, indent)
         if #nums == 0 and #strs == 0 then
             return '{}'
         end
+        -- Inline flat tables (slot action tables: scalar values only, no numeric keys)
+        if #nums == 0 and is_flat(v) then
+            local parts = {}
+            for _, k in ipairs(strs) do
+                local key = k:match('^[%a_][%w_]*$') and k or ('[' .. quote_string(k) .. ']')
+                parts[#parts + 1] = key .. ' = ' .. serialize_value(v[k], '')
+            end
+            return '{ ' .. table.concat(parts, ', ') .. ' }'
+        end
         local child = indent .. '  '
         local parts = {}
+        -- Environment tables (has 'name' key): emit name first, then order if present
+        local ordered_strs
+        if v['name'] ~= nil then
+            ordered_strs = { 'name' }
+            if v['order'] ~= nil then
+                ordered_strs[#ordered_strs + 1] = 'order'
+            end
+            for _, k in ipairs(strs) do
+                if k ~= 'name' and k ~= 'order' then
+                    ordered_strs[#ordered_strs + 1] = k
+                end
+            end
+        else
+            ordered_strs = strs
+        end
         for _, k in ipairs(nums) do
             parts[#parts + 1] = child .. '[' .. k .. '] = ' .. serialize_value(v[k], child)
         end
-        for _, k in ipairs(strs) do
+        for _, k in ipairs(ordered_strs) do
             local key = k:match('^[%a_][%w_]*$') and k or ('[' .. quote_string(k) .. ']')
             parts[#parts + 1] = child .. key .. ' = ' .. serialize_value(v[k], child)
         end
