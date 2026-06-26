@@ -433,7 +433,7 @@ end
 
 -- HELPER FUNCTIONS
 function sortByName(a, b)
-    return a.name < b.name
+    return a.name:lower() < b.name:lower()
 end
 
 function kebab_casify(str)
