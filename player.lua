@@ -66,8 +66,6 @@ player.hotbar_settings.max = 1
 player.hotbar_settings.active_hotbar = 1
 player.hotbar_settings.active_environment = 'Field'
 
-player.auto_create_xml = true
-
 -- initialize player
 function player:initialize(windower_player, server, theme_options, enchanted_items)
     self.name = windower_player.name
@@ -86,15 +84,9 @@ function player:initialize(windower_player, server, theme_options, enchanted_ite
 
     self.sch_jp_spent = windower_player.job_points.sch.jp_spent
 
-    self.auto_create_xml = theme_options.AutoCreateXML
-
     self:reset_edit_target()
 
     storage:setup(self)
-end
-
-local unescape = function(str)
-    return str:gsub('&apos;', '\''):gsub('quote', '"')
 end
 
 -- update player jobs
@@ -152,56 +144,54 @@ function player:load_hotbar()
     self:update_current_spells()
     self:reset_hotbar()
 
-    -- the storage.* handles are current for this job by now; attach them so each
-    -- base level knows which file it flushes to
+    -- attach the storage handles + section keys so each base level knows where it
+    -- reads from and (for the job levels) which {JOB}.lua section it anchors into
     self.hotbar_levels[1].file = storage.all_jobs_file
-    self.hotbar_levels[2].file = storage.job_default_file
-    self.hotbar_levels[3].file = storage.file
+    self.hotbar_levels[2].file = storage.job_file
+    self.hotbar_levels[2].combo = storage.job_default_key
+    self.hotbar_levels[3].file = storage.job_file
+    self.hotbar_levels[3].combo = storage.filename
 
-    -- if all jobs file exists, load it. If not, build a default version in memory
-    if storage.all_jobs_file:exists() then
-        self:load_level_from_file(1, storage.all_jobs_file)
-    elseif self.auto_create_xml then
+    -- Level 1 (all-jobs): General.lua, loaded fresh from disk each time. If absent,
+    -- build a default Field environment in memory.
+    local all_jobs = storage:load_all_jobs()
+    if all_jobs ~= nil then
+        self.hotbar_levels[1].data = all_jobs
+    else
         self:create_all_jobs_default_hotbar()
     end
 
-    -- if job default file exists, load it. If not, build a default version in memory.
-    -- The in-memory default is written to disk only on the first in-game edit (via the
-    -- dirty_levels mechanism), the same as the all-jobs and job-sub levels.
-    if storage.job_default_file:exists() then
-        self:load_level_from_file(2, storage.job_default_file)
-    elseif self.auto_create_xml then
+    -- Level 2 (job-default): the {JOB}-DEFAULT section of the cached {JOB}.lua. If
+    -- absent, build a default Battle environment and register it in job_data eagerly.
+    local job_default = storage:get_job_section(storage.job_default_key)
+    if job_default ~= nil then
+        self.hotbar_levels[2].data = job_default
+    else
         self:create_job_default_hotbar()
     end
 
-    -- if normal hotbar file exists, load it. If not, build a default hotbar in memory
-    if storage.file:exists() then
-        self:load_level_from_file(3, storage.file)
-    elseif self.auto_create_xml then
+    -- Level 3 (job-sub): the {JOB}-{SUB} section. Absent (empty + transient) until
+    -- the user edits it, at which point the first save anchors it into job_data.
+    local job_sub = storage:get_job_section(storage.filename)
+    if job_sub ~= nil then
+        self.hotbar_levels[3].data = job_sub
+    else
         self:create_default_hotbar()
     end
 
     self:merge_levels()
 end
 
--- read the three static XML files into hotbar_levels and rebuild player.hotbar
+-- load an ability overlay level (LA / DA / LA-AW / DA-AB) from the cached {JOB}.lua.
+-- A saved section is loaded by reference so in-game edits mutate job_data directly;
+-- an absent section gets a transient empty level that is not registered in job_data
+-- until the first edit anchors it (see save_hotbar / anchor_job_section).
 function player:load_ability_overlay(name)
-    local overlay_file = storage:get_ability_file(name)
-    if not overlay_file:exists() then
-        return
-    end
+    local combo_key = storage.filename .. '-' .. name
+    local section = storage:get_job_section(combo_key)
+    local data = section or { sets = {} }
 
-    -- parse and validate into a local table first; only append the overlay level
-    -- on success so a malformed/missing-root file leaves no phantom empty level
-    local contents = xml.read(overlay_file)
-    if contents == nil or contents.name ~= 'hotbar' then
-        return
-    end
-
-    local data = { hotbar = {} }
-    self:parse_hotbar_into(data.hotbar, contents)
-
-    local level = { name = name, file = overlay_file, data = data }
+    local level = { name = name, file = storage.job_file, combo = combo_key, data = data }
     self.hotbar_levels[#self.hotbar_levels + 1] = level
     self:merge_levels()
 end
@@ -230,7 +220,7 @@ function player:merge_levels()
 
     for i = 1, #self.hotbar_levels, 1 do
         local level = self.hotbar_levels[i]
-        for environment, hotbars in pairs(level.data.hotbar) do
+        for environment, hotbars in pairs(level.data.sets) do
             if self.hotbar[environment] == nil then
                 self.hotbar[environment] = {}
             end
@@ -271,107 +261,33 @@ local function shallow_copy_action(action)
     return copy
 end
 
--- load a hotbar file into the given level's data table
-function player:load_level_from_file(level_index, storage_file)
-    local contents = xml.read(storage_file)
-
-    if contents == nil or contents.name ~= 'hotbar' then
-        windower.console.write('XIVCROSSBAR: invalid hotbar on ' .. storage.filename)
-        return
-    end
-
-    local target_hotbar = self.hotbar_levels[level_index].data.hotbar
-    self:parse_hotbar_into(target_hotbar, contents)
-end
-
--- parse an xml hotbar DOM (root element) into the given target hotbar table
-function player:parse_hotbar_into(target_hotbar, contents)
-    for key, environment in ipairs(contents.children) do
-        local environment_name = nil
-        for key, hotbar in ipairs(environment.children) do     -- hotbar number
-            if (hotbar.name == 'name') then
-                for key, name in ipairs(hotbar.children) do
-                    environment_name = name.value
-                end
-            end
-        end
-        if (environment_name == nil) then
-            environment_name = key
-        end
-        for key, hotbar in ipairs(environment.children) do     -- hotbar number
-            if (hotbar.name ~= 'name') then
-                for key, slot in ipairs(hotbar.children) do       -- slot number
-                    local new_action = {}
-
-                    for key, tag in ipairs(slot.children) do   -- action
-                        if tag.name == 'type' then
-                            new_action.type = tag.children[1].value
-                        elseif tag.name == 'action' then
-                            new_action.action = unescape(tag.children[1].value)
-                        elseif tag.name == 'target' then
-                            if tag.children[1] == nil then
-                                new_action.target = nil
-                            else
-                                new_action.target = tag.children[1].value
-                            end
-
-                        elseif tag.name == 'alias' then
-                            new_action.alias = tag.children[1].value
-                        elseif tag.name == 'icon' then
-                            new_action.icon = tag.children[1].value
-                        elseif tag.name == 'equip_slot' then
-                            new_action.equip_slot = tag.children[1].value
-                        elseif tag.name == 'warmup' then
-                            new_action.warmup = tag.children[1].value
-                        elseif tag.name == 'cooldown' then
-                            new_action.cooldown = tag.children[1].value
-                        elseif tag.name == 'usable' then
-                            new_action.usable = tag.children[1].value
-                        end
-                    end
-
-                    self:add_action_to(
-                        target_hotbar,
-                        action_manager:build(new_action.type, new_action.action, new_action.target, new_action.alias, new_action.icon, new_action.equip_slot, new_action.warmup, new_action.cooldown, new_action.usable),
-                        environment_name,
-                        hotbar.name:gsub('hotbar_', ''),
-                        slot.name:gsub('slot_', '')
-                    )
-                end
-            end
-        end
-    end
-end
-
--- create a default hotbar in the job-sub level
+-- create an empty job-sub level. JOB-SUB starts empty and the table stays transient
+-- (out of job_data) until the first edit anchors it on save -- the {JOB}-{SUB} section
+-- must not appear in {JOB}.lua until the user actually edits it.
 function player:create_default_hotbar()
-    local target_hotbar = self.hotbar_levels[3].data.hotbar
-
-    target_hotbar.default = {}
-    target_hotbar.default['name'] = 'Default'
-    self:setup_environment_hotbars(target_hotbar, 'default')
-
-    target_hotbar.basic = {}
-    target_hotbar.basic['name'] = 'Basic'
-    self:setup_environment_hotbars(target_hotbar, 'basic')
+    self.hotbar_levels[3].data = { sets = {} }
 end
 
--- create a fallback hotbar that applies to all subjobs of this job
+-- create the fallback hotbar that applies to all subjobs of this job (the
+-- {JOB}-DEFAULT section). Auto-creates a General environment and registers the level
+-- in job_data eagerly so its content is persisted whenever {JOB}.lua is next written.
 function player:create_job_default_hotbar()
-    local target_hotbar = self.hotbar_levels[2].data.hotbar
+    local data = self.hotbar_levels[2].data
+    data.sets['general'] = {}
+    data.sets['general']['name'] = 'General'
+    self:setup_environment_hotbars(data.sets, 'general')
 
-    target_hotbar['job-default'] = {}
-    target_hotbar['job-default']['name'] = 'Job Default'
-    self:setup_environment_hotbars(target_hotbar, 'job-default')
+    storage.job_data[storage.job_default_key] = data
 end
 
--- create a fallback hotbar that applies to all jobs on this character
+-- create the fallback hotbar that applies to all jobs on this character (General.lua).
+-- Auto-creates a Field environment shared across every job via the merge.
 function player:create_all_jobs_default_hotbar()
-    local target_hotbar = self.hotbar_levels[1].data.hotbar
+    local sets = self.hotbar_levels[1].data.sets
 
-    target_hotbar['all-jobs-default'] = {}
-    target_hotbar['all-jobs-default']['name'] = 'All Jobs Default'
-    self:setup_environment_hotbars(target_hotbar, 'all-jobs-default')
+    sets['field'] = {}
+    sets['field']['name'] = 'Field'
+    self:setup_environment_hotbars(sets, 'field')
 end
 
 -- reset player hotbar
@@ -380,9 +296,9 @@ function player:reset_hotbar()
     self.dirty_levels = {}
 
     self.hotbar_levels = {
-        { name = 'all-jobs', file = nil, data = { hotbar = {} } },
-        { name = 'job-default', file = nil, data = { hotbar = {} } },
-        { name = 'job-sub', file = nil, data = { hotbar = {} } }
+        { name = 'all-jobs', file = nil, data = { sets = {} } },
+        { name = 'job-default', file = nil, data = { sets = {} } },
+        { name = 'job-sub', file = nil, data = { sets = {} } }
     }
 
     self.hotbar_settings.active_hotbar = 1
@@ -458,23 +374,24 @@ function player:reset_edit_target()
     self.edit_target_overlay_name = nil
 end
 
--- basename of the file the current edit target writes to (for display)
+-- label of the file/section the current edit target writes to (for display)
 function player:get_edit_target_filename()
     local id = self.edit_target_level
     if id == 1 then
-        return 'ALL-JOBS-DEFAULT.xml'
+        return 'General.lua'
     elseif id == 2 then
-        return self.main_job .. '-DEFAULT.xml'
+        return self.main_job .. '.lua (' .. storage.job_default_key .. ')'
     elseif id == 3 then
-        return storage.filename .. '.xml'
+        return self.main_job .. '.lua (' .. storage.filename .. ')'
     else
-        return storage.filename .. '-' .. self.edit_target_overlay_name .. '.xml'
+        return self.main_job .. '.lua (' .. storage.filename .. '-' .. self.edit_target_overlay_name .. ')'
     end
 end
 
--- find an ability overlay level by name; load it from file if not in memory, and if
--- the file does not exist yet create an empty in-memory level (the first edit then
--- creates the XML on save). Returns the overlay's index in hotbar_levels.
+-- find an ability overlay level by name, loading it if not already in hotbar_levels.
+-- load_ability_overlay always appends a level (a saved {JOB}.lua section by reference,
+-- or a transient empty one), so the section is registered in job_data only later, on
+-- the first edit's save. Returns the overlay's index in hotbar_levels.
 function player:ensure_ability_overlay(name)
     for i = 4, #self.hotbar_levels do
         if self.hotbar_levels[i].name == name then
@@ -482,7 +399,6 @@ function player:ensure_ability_overlay(name)
         end
     end
 
-    -- not loaded: try loading from file first
     self:load_ability_overlay(name)
     for i = 4, #self.hotbar_levels do
         if self.hotbar_levels[i].name == name then
@@ -490,11 +406,6 @@ function player:ensure_ability_overlay(name)
         end
     end
 
-    -- file doesn't exist yet: create an empty in-memory overlay level;
-    -- save_hotbar will create the file on the next edit
-    local level = { name = name, file = storage:get_ability_file(name), data = { hotbar = {} } }
-    self.hotbar_levels[#self.hotbar_levels + 1] = level
-    self:merge_levels()
     return #self.hotbar_levels
 end
 
@@ -520,12 +431,12 @@ end
 -- then refresh the merged view.
 function player:add_action(action, environment, hotbar, slot)
     local idx = self:resolve_edit_level(environment, hotbar, slot)
-    self:add_action_to(self.hotbar_levels[idx].data.hotbar, action, environment, hotbar, slot)
+    self:add_action_to(self.hotbar_levels[idx].data.sets, action, environment, hotbar, slot)
     self.dirty_levels[idx] = true
     self:merge_levels()
 end
 
--- add given action to a specific hotbar table (a level's data.hotbar)
+-- add given action to a specific hotbar table (a level's data.sets)
 function player:add_action_to(target_hotbar, action, environment, hotbar, slot)
     if environment == nil or environment == '' then
         return
@@ -665,7 +576,7 @@ function player:remove_action(environment, hotbar, slot)
     local idx = self:resolve_delete_level(environment, hotbar, slot)
 
     local env_key = kebab_casify(environment)
-    local target_hotbar = self.hotbar_levels[idx].data.hotbar
+    local target_hotbar = self.hotbar_levels[idx].data.sets
     if target_hotbar[env_key] == nil then return end
     if target_hotbar[env_key]['hotbar_' .. hotbar] == nil then return end
 
@@ -692,7 +603,7 @@ function player:copy_action(environment, hotbar, slot, to_environment, to_hotbar
     if action == nil then return end
 
     local dest_idx = self:resolve_edit_level(to_environment, to_hotbar, to_slot)
-    local target = self.hotbar_levels[dest_idx].data.hotbar
+    local target = self.hotbar_levels[dest_idx].data.sets
     if target[dest_env_key] == nil then
         target[dest_env_key] = {}
         target[dest_env_key]['name'] = to_environment
@@ -706,7 +617,7 @@ function player:copy_action(environment, hotbar, slot, to_environment, to_hotbar
 
     if is_moving then
         local src_idx = self:resolve_delete_level(environment, hotbar, slot)
-        local source = self.hotbar_levels[src_idx].data.hotbar
+        local source = self.hotbar_levels[src_idx].data.sets
         if source[src_env_key] ~= nil and source[src_env_key]['hotbar_' .. hotbar] ~= nil then
             source[src_env_key]['hotbar_' .. hotbar]['slot_' .. slot] = nil
             self.dirty_levels[src_idx] = true
@@ -727,7 +638,7 @@ function player:prepare_field_edit(idx, env_key, hotbar, slot)
     local action = merged['hotbar_' .. hotbar]['slot_' .. slot]
     if action == nil or action.action == nil then return nil end
 
-    local target = self.hotbar_levels[idx].data.hotbar
+    local target = self.hotbar_levels[idx].data.sets
     if target[env_key] == nil then
         target[env_key] = {}
         target[env_key]['name'] = merged['name'] or env_key
@@ -788,7 +699,7 @@ function player:create_new_environment(name)
         end
 
         local idx = self:resolve_edit_level(nil, nil, nil)
-        self.hotbar_levels[idx].data.hotbar[kebab_casify(name)] = new_environment
+        self.hotbar_levels[idx].data.sets[kebab_casify(name)] = new_environment
         self.dirty_levels[idx] = true
         self:merge_levels()
     else
@@ -797,15 +708,28 @@ function player:create_new_environment(name)
 end
 
 -- save current hotbar. Only the levels touched by in-game edits since the last save
--- are flushed to disk; untouched files (including the hand-edited ALL-JOBS-DEFAULT)
--- are left alone.
+-- are flushed to disk. Level 1 (all-jobs) writes General.lua; any dirty job level
+-- (2+) is first anchored into job_data, then the whole {JOB}.lua is rewritten once.
+-- Untouched files (including a hand-edited General.lua) are left alone.
 function player:save_hotbar()
+    local save_job = false
+
     for idx in pairs(self.dirty_levels) do
-        local level = self.hotbar_levels[idx]
-        if level and level.file then
-            storage:save_level(level.data, level.file)
+        if idx == 1 then
+            storage:save_all_jobs(self.hotbar_levels[1].data)
+        else
+            local level = self.hotbar_levels[idx]
+            if level and level.combo then
+                storage:anchor_job_section(level.combo, level.data)
+                save_job = true
+            end
         end
     end
+
+    if save_job then
+        storage:save_job_file()
+    end
+
     self.dirty_levels = {}
 end
 

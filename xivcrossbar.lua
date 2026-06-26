@@ -41,7 +41,6 @@ texts = require('texts')
 images = require('images')
 tables = require('tables')
 resources = require('resources')
-xml = require('libs/xml2')   -- TODO: REMOVE
 
 -- User settings
 local defaults = require('defaults')
