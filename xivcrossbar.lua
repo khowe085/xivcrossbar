@@ -94,6 +94,7 @@ local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
 local is_right_doublepress_window_open = false
+local plus_hold_pending = false
 
 local function close_left_doublepress_window()
     is_left_doublepress_window_open = false
@@ -930,10 +931,20 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
 
     if (gamepad_state.capturing and gamepad.is_plus(dik)) then
         if (pressed) then
-            local environments = env_chooser:get_player_environments(player.hotbar)
-            env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+            plus_hold_pending = true
+            coroutine.schedule(function()
+                if plus_hold_pending then
+                    plus_hold_pending = false
+                    env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+                end
+            end, 0.5)
         else
-            env_chooser:hide_player_environments()
+            if plus_hold_pending then
+                plus_hold_pending = false
+                windower.send_command('xb cycle')
+            else
+                env_chooser:hide_player_environments()
+            end
         end
     end
 end)
