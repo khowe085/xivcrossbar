@@ -380,6 +380,40 @@ function env_chooser:is_showing()
     return self.is_shown
 end
 
+-- picker navigation: includes ADD_NEW_SET so the user can navigate to it
+function env_chooser:get_prev_picker_entry(player_hotbar, current_environment)
+    local last_was_current = false
+    local environments = self:get_player_environments(player_hotbar)
+    if #environments == 0 then return current_environment end
+    for i, environment in ipairs(environments) do
+        if last_was_current then
+            return kebab_casify(environment.name)
+        end
+        if kebab_casify(environment.name) == current_environment then
+            last_was_current = true
+        end
+    end
+    return kebab_casify(environments[1].name)
+end
+
+function env_chooser:get_next_picker_entry(player_hotbar, current_environment)
+    local prev_name = nil
+    local last_name = nil
+    local environments = self:get_player_environments(player_hotbar)
+    if #environments == 0 then return current_environment end
+    for i, environment in ipairs(environments) do
+        if kebab_casify(environment.name) == current_environment then
+            if prev_name ~= nil then
+                return prev_name
+            end
+        else
+            prev_name = kebab_casify(environment.name)
+        end
+        last_name = kebab_casify(environment.name)
+    end
+    return last_name
+end
+
 local function get_valid_environments(self, player_hotbar)
     local environments = self:get_player_environments(player_hotbar)
     local valid = L{}

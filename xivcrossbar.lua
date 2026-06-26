@@ -891,12 +891,12 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
     if (env_chooser:is_showing() and pressed) then
         -- handle up and down arrows if the environment chooser is showing
         if gamepad_state.capturing and gamepad.is_dpad_down(dik) then
-            local prev_environment = env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment)
+            local prev_environment = env_chooser:get_prev_picker_entry(player.hotbar, player.hotbar_settings.active_environment)
             set_active_environment(prev_environment)
             env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
             return true
         elseif gamepad_state.capturing and gamepad.is_dpad_up(dik) then -- up dpad
-            local next_environment = env_chooser:get_next_environment(player.hotbar, player.hotbar_settings.active_environment)
+            local next_environment = env_chooser:get_next_picker_entry(player.hotbar, player.hotbar_settings.active_environment)
             set_active_environment(next_environment)
             env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
             return true
