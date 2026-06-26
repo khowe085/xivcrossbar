@@ -390,8 +390,15 @@ end
 
 function player:get_edit_target_label()
     local id = self.edit_target_level
-    local labels = { [1] = 'General', [2] = 'Job Default', [3] = 'Job+Sub' }
-    return labels[id] or (self.edit_target_overlay_name or '')
+    if id == 1 then
+        return 'General.lua'
+    elseif id == 2 then
+        return '(' .. storage.job_default_key .. ')'
+    elseif id == 3 then
+        return '(' .. storage.filename .. ')'
+    else
+        return '(' .. storage.filename .. '-' .. self.edit_target_overlay_name .. ')'
+    end
 end
 
 -- find an ability overlay level by name, loading it if not already in hotbar_levels.
