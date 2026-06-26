@@ -318,7 +318,7 @@ function ui:load(theme_options)
     self.set_display_target = texts.new(text_setup)
     setup_text(self.set_display_target, theme_options)
     self.set_display_target:size(self.theme.set_display_target_font_size)
-    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + 20)
+    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + 25)
     self.set_display_target:text('')
     self.set_display_target:hide()
 
@@ -530,7 +530,11 @@ function ui:update_set_display(player_hotbar, environment)
     local display_name = (env_data and env_data.name) or environment or ''
     self.set_display_name:text(display_name)
     self.set_display_name:show()
-    self.set_display_target:text(player:get_edit_target_label() or '')
+    local job_label = player.main_job or ''
+    if player.sub_job and player.sub_job ~= '' then
+      job_label = job_label .. '/' .. player.sub_job
+    end
+    self.set_display_target:text(job_label)
     self.set_display_target:show()
 end
 
