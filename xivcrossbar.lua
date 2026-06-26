@@ -82,6 +82,7 @@ gamepad_state.right_trigger_doublepress = false
 gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
+local cycle_stack = {}
 local current_arts = nil
 local current_addendum = nil
 -- Scholar arts/addendum are identified by the STATUS (buff) id they grant
@@ -534,6 +535,7 @@ function display_help_menu()
     windower.send_command('echo Text Commands (crossbar navigation):')
     windower.send_command('echo xb next: Switch to the next crossbar set (down in picker)')
     windower.send_command('echo xb prev: Switch to the previous crossbar set (up in picker)')
+    windower.send_command('echo xb cycle: Push current set and move to next; pop and return on second call')
     windower.send_command('echo ===============================================')
 end
 
@@ -623,6 +625,13 @@ windower.register_event('addon command', function(command, ...)
     elseif command == 'prev' then
         local prev_environment = env_chooser:get_next_environment(player.hotbar, player.hotbar_settings.active_environment)
         set_active_environment(prev_environment)
+    elseif command == 'cycle' then
+        if #cycle_stack == 0 then
+            table.insert(cycle_stack, player.hotbar_settings.active_environment)
+            set_active_environment(env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment))
+        else
+            set_active_environment(table.remove(cycle_stack))
+        end
     elseif command == 'remap' then
         remap()
     elseif command == 'regenerate' then
