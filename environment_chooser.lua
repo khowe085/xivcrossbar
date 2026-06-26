@@ -380,11 +380,23 @@ function env_chooser:is_showing()
     return self.is_shown
 end
 
+local function get_valid_environments(self, player_hotbar)
+    local environments = self:get_player_environments(player_hotbar)
+    local valid = L{}
+    for i, environment in ipairs(environments) do
+        if environment.name ~= ADD_NEW_SET and environment.name and environment.name ~= '' then
+            valid:append(environment)
+        end
+    end
+    return valid
+end
+
 function env_chooser:get_prev_environment(player_hotbar, current_environment)
     local last_was_current = false
 
-    local environments = self:get_player_environments(player_hotbar)
-    for i, environment in ipairs(environments) do
+    local valid = get_valid_environments(self, player_hotbar)
+    if #valid == 0 then return current_environment end
+    for i, environment in ipairs(valid) do
         if (last_was_current) then
             return kebab_casify(environment.name)
         end
@@ -394,21 +406,19 @@ function env_chooser:get_prev_environment(player_hotbar, current_environment)
     end
 
     -- if we're here, the current environment is the last in the list so return the first
-    return kebab_casify(environments[1].name)
+    return kebab_casify(valid[1].name)
 end
 
 function env_chooser:get_next_environment(player_hotbar, current_environment)
     local prev_name = nil
-    local current_is_first = false
     local last_name = nil
 
-    local environments = self:get_player_environments(player_hotbar)
-    for i, environment in ipairs(environments) do
+    local valid = get_valid_environments(self, player_hotbar)
+    if #valid == 0 then return current_environment end
+    for i, environment in ipairs(valid) do
         if (kebab_casify(environment.name) == current_environment) then
             if (prev_name ~= nil) then
                 return prev_name
-            else
-                current_is_first = true
             end
         else
             prev_name = kebab_casify(environment.name)
@@ -417,7 +427,7 @@ function env_chooser:get_next_environment(player_hotbar, current_environment)
         last_name = kebab_casify(environment.name)
     end
 
-    -- if we're here, the current environment is the first in the last so return the last
+    -- current was first in the list or was not found; wrap to last valid set
     return last_name
 end
 
