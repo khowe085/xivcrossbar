@@ -259,6 +259,7 @@ function ui:setup(theme_options, enchanted_items)
     self.theme.skillchain_open_color_blue = theme_options.skillchain_open_color_blue
     self.theme.skillchain_indicator_offset_x = theme_options.skillchain_indicator_offset_x
     self.theme.skillchain_indicator_offset_y = theme_options.skillchain_indicator_offset_y
+    self.theme.set_display_enabled  = theme_options.set_display_enabled
     self.theme.set_display_offset_x = theme_options.set_display_offset_x
     self.theme.set_display_offset_y = theme_options.set_display_offset_y
 
@@ -516,6 +517,11 @@ end
 
 function ui:update_set_display(environment)
     if self.set_display_name == nil or self.set_display_target == nil then return end
+    if not self.theme.set_display_enabled then
+        self.set_display_name:hide()
+        self.set_display_target:hide()
+        return
+    end
     self.set_display_name:text(environment or '')
     self.set_display_name:show()
     self.set_display_target:text(player:get_edit_target_filename() or '')

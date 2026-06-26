@@ -46,6 +46,7 @@ theme.apply = function (settings)
     options.skillchain_open_color_blue = settings.SkillchainIndicator.WindowOpenColor.Blue
     options.skillchain_indicator_offset_x = settings.SkillchainIndicator.OffsetX
     options.skillchain_indicator_offset_y = settings.SkillchainIndicator.OffsetY
+    options.set_display_enabled  = settings.SetDisplay.Enabled
     options.set_display_offset_x = settings.SetDisplay.OffsetX
     options.set_display_offset_y = settings.SetDisplay.OffsetY
 
