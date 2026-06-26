@@ -530,11 +530,7 @@ function ui:update_set_display(player_hotbar, environment)
     local display_name = (env_data and env_data.name) or environment or ''
     self.set_display_name:text(display_name)
     self.set_display_name:show()
-    local job_label = player.main_job or ''
-    if player.sub_job and player.sub_job ~= '' then
-      job_label = job_label .. '/' .. player.sub_job
-    end
-    self.set_display_target:text(job_label)
+    self.set_display_target:text(player:get_edit_target_label() or '')
     self.set_display_target:show()
 end
 

@@ -71,7 +71,7 @@ defaults.Controls.SetSelectorDelaySeconds = 3.0
 defaults.SetDisplay = {}
 defaults.SetDisplay.Enabled         = true
 defaults.SetDisplay.NameFontSize    = 16
-defaults.SetDisplay.TargetFontSize  = 12
+defaults.SetDisplay.TargetFontSize  = 6
 defaults.SetDisplay.OffsetX         = 250
 defaults.SetDisplay.OffsetY         = 0
 
