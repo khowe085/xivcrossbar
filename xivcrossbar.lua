@@ -531,6 +531,10 @@ function display_help_menu()
     windower.send_command('echo ' .. left_trigger .. '/' .. right_trigger .. ' Triggers + D-Pad: Navigate button bind utility (when open)')
     windower.send_command('echo ' .. left_trigger .. '/' .. right_trigger .. ' Triggers + D-Pad or ' .. buttons .. ' Button: executes bound action')
     windower.send_command('echo ===============================================')
+    windower.send_command('echo Text Commands (crossbar navigation):')
+    windower.send_command('echo xb next: Switch to the next crossbar set (down in picker)')
+    windower.send_command('echo xb prev: Switch to the previous crossbar set (up in picker)')
+    windower.send_command('echo ===============================================')
 end
 
 -----------------------------
@@ -613,6 +617,12 @@ windower.register_event('addon command', function(command, ...)
         update_alias_command(args)
     elseif command == 'n' or command == 'new' then
         new_environment_command(args)
+    elseif command == 'next' then
+        local next_environment = env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment)
+        set_active_environment(next_environment)
+    elseif command == 'prev' then
+        local prev_environment = env_chooser:get_next_environment(player.hotbar, player.hotbar_settings.active_environment)
+        set_active_environment(prev_environment)
     elseif command == 'remap' then
         remap()
     elseif command == 'regenerate' then
