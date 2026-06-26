@@ -277,7 +277,7 @@ end
 
 function action_binder:update_active_crossbar(left_trigger_just_pressed, right_trigger_just_pressed)
     if (self.trigger_left_pressed and self.trigger_right_pressed) then
-        if (self.theme_options.hotbar_number > 3) then
+        if (self.theme_options.hotbar_number > 3 and not self.theme_options.lock_dual_trigger_to_bar3) then
             if (left_trigger_just_pressed) then
                 -- R -> L = bar 3
                 self.active_crossbar = 3
