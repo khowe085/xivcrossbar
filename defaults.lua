@@ -68,6 +68,10 @@ defaults.Controls.LockDualTriggerToBar3   = false
 defaults.Controls.NavModeDelaySeconds     = 0.25
 defaults.Controls.SetSelectorDelaySeconds = 3.0
 
+defaults.SetDisplay = {}
+defaults.SetDisplay.OffsetX = 0
+defaults.SetDisplay.OffsetY = 0
+
 defaults.Theme = {}
 defaults.Theme.BattleNotice = 'ffxiv'
 defaults.Theme.Slot = 'ffxiv'

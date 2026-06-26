@@ -161,6 +161,9 @@ end
 
 function set_edit_target(level_index)
     player:set_edit_target(level_index)
+    if ui.is_setup then
+        ui:update_set_display(player.hotbar_settings.active_environment)
+    end
 end
 
 function get_edit_target()

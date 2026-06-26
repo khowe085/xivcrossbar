@@ -259,6 +259,8 @@ function ui:setup(theme_options, enchanted_items)
     self.theme.skillchain_open_color_blue = theme_options.skillchain_open_color_blue
     self.theme.skillchain_indicator_offset_x = theme_options.skillchain_indicator_offset_x
     self.theme.skillchain_indicator_offset_y = theme_options.skillchain_indicator_offset_y
+    self.theme.set_display_offset_x = theme_options.set_display_offset_x
+    self.theme.set_display_offset_y = theme_options.set_display_offset_y
 
     self.theme.slot_opacity = theme_options.slot_opacity
     self.theme.disabled_slot_opacity = theme_options.disabled_slot_opacity
@@ -302,6 +304,18 @@ function ui:load(theme_options)
     windower.prim.set_position('skillchain_indicator', self:get_slot_x(1, 1) - 10 + self.theme.skillchain_indicator_offset_x, self:get_slot_y(1, 4) - 30 + self.theme.skillchain_indicator_offset_y)
     windower.prim.set_size('skillchain_indicator', 600, 10)
     windower.prim.set_visibility('skillchain_indicator', false)
+
+    self.set_display_name = texts.new(text_setup)
+    setup_text(self.set_display_name, theme_options)
+    self.set_display_name:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y)
+    self.set_display_name:text('')
+    self.set_display_name:hide()
+
+    self.set_display_target = texts.new(text_setup)
+    setup_text(self.set_display_target, theme_options)
+    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + 14)
+    self.set_display_target:text('')
+    self.set_display_target:hide()
 
     self.bar_background = images.new(images_setup)
     self.bar_background_left = images.new(images_setup)
@@ -496,6 +510,16 @@ function ui:hide()
     self.bar_background:hide()
     self.bar_background_left:hide()
     self.bar_background_right:hide()
+    if self.set_display_name then self.set_display_name:hide() end
+    if self.set_display_target then self.set_display_target:hide() end
+end
+
+function ui:update_set_display(environment)
+    if self.set_display_name == nil or self.set_display_target == nil then return end
+    self.set_display_name:text(environment or '')
+    self.set_display_name:show()
+    self.set_display_target:text(player:get_edit_target_filename() or '')
+    self.set_display_target:show()
 end
 
 function ui:hide_button_hints()
@@ -612,6 +636,7 @@ function ui:load_player_hotbar(player_hotbar, player_vitals, environment, gamepa
             self:load_action(player_hotbar, environment, h, slot, action, player_vitals, shouldDrawThisBar)
         end
     end
+    self:update_set_display(environment)
 end
 
 function ui:should_show_element(element)
