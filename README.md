@@ -6,6 +6,12 @@ Fixes:
 
     Fixed Ninja Tools not showing a count if using master tools
 
+	Fixed SCH strategem counts not showing up when SCH was set as a subjob
+
+Breaking changes:
+	Converted configuration from multiple XML per job to one lua file per job +  1 common lua file
+	Removed the 'Defualt' fallback system
+	Added xivhotbar style conditional hierarchical slot-by-slot merge system
 
 Additions:
 
@@ -15,7 +21,13 @@ Additions:
 
 	Added options in settings to adjust offsets of hotbars relative to hotbar 1 when not in the Alternative layout
 
-    Added Alternate Layout (UseAltLayout) that mimics FFXIV's alt layout, where the left side will always be dpad and right side will be face buttons. Note: This makes editing the hotbar data files a litte more confusing, as it alternates what is shows. For example, from left to right on your screen you will now see hotbar_1 slots 1-4, then hotbar_2 slots 1-4, then hotbar_1 slots 5-8 and finally hotbar_2 slots 5-8. Keep that in mind if manually editing the data files.
+	Added options in settings to adjust the skillchain indicator position 
+
+	Added options in settings to disable auto-launching the AHK script
+
+	Added option to use hotbar 3 for both L/R and R/L dual-trigger pulls
+
+    Added Alternate Layout (UseAltLayout) that mimics FFXIV's alt layout, where the left side will always be dpad and right side will be face buttons. Note: This makes editing the xmls a litte more confusing, as it alternates what is shows. For example, from left to right on your screen you will now see hotbar_1 slots 1-4, then hotbar_2 slots 1-4, then hotbar_1 slots 5-8 and finally hotbar_2 slots 5-8. Keep that in mind if manually editing the xmls.
 
 Hotbar File Layout & Light/Dark Arts Overlays:
 
@@ -72,7 +84,7 @@ OR (for Steam Deck users)
 
 OR (for 2026 Steam Controller users)
 
-1c) Apply steam input profile steam://controllerconfig/230330/3750616172
+1c) Apply steam input profile steam://controllerconfig/230330/3751915997 (workshop://3751915997)
 	- Note: If you don't it to open the AHK script on load, you can disable it in the settings!
 	
 2) Enable the "Run" plugin in Windower
