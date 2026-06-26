@@ -226,8 +226,8 @@ function player:merge_levels()
             end
 
             for key, value in pairs(hotbars) do
-                if key == 'name' then
-                    self.hotbar[environment]['name'] = value
+                if key == 'name' or key == 'order' then
+                    self.hotbar[environment][key] = value
                 else
                     -- key is a hotbar_N table of slots
                     if self.hotbar[environment][key] == nil then

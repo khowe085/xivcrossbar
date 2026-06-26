@@ -177,7 +177,7 @@ function env_chooser:get_player_environments(player_hotbar)
         end
     end
 
-    non_defaults:sort(sortByName)
+    non_defaults:sort(sortByOrder)
 
     if (all_jobs_default ~= nil) then
         environments:append(all_jobs_default)
@@ -432,7 +432,12 @@ function env_chooser:get_next_environment(player_hotbar, current_environment)
 end
 
 -- HELPER FUNCTIONS
-function sortByName(a, b)
+function sortByOrder(a, b)
+    local order_a = a.order or 0
+    local order_b = b.order or 0
+    if order_a ~= order_b then
+        return order_a < order_b
+    end
     return a.name:lower() < b.name:lower()
 end
 
