@@ -72,6 +72,8 @@ defaults.SetDisplay = {}
 defaults.SetDisplay.Enabled         = true
 defaults.SetDisplay.NameFontSize    = 16
 defaults.SetDisplay.TargetFontSize  = 6
+defaults.SetDisplay.Width           = 200
+defaults.SetDisplay.Height          = 50
 defaults.SetDisplay.OffsetX         = 260
 defaults.SetDisplay.OffsetY         = 0
 

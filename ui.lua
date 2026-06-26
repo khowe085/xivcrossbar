@@ -262,6 +262,8 @@ function ui:setup(theme_options, enchanted_items)
     self.theme.set_display_enabled          = theme_options.set_display_enabled
     self.theme.set_display_name_font_size   = theme_options.set_display_name_font_size
     self.theme.set_display_target_font_size = theme_options.set_display_target_font_size
+    self.theme.set_display_width            = theme_options.set_display_width
+    self.theme.set_display_height           = theme_options.set_display_height
     self.theme.set_display_offset_x         = theme_options.set_display_offset_x
     self.theme.set_display_offset_y         = theme_options.set_display_offset_y
 
@@ -318,7 +320,7 @@ function ui:load(theme_options)
     self.set_display_target = texts.new(text_setup)
     setup_text(self.set_display_target, theme_options)
     self.set_display_target:size(self.theme.set_display_target_font_size)
-    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + 25)
+    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + math.floor(self.theme.set_display_height / 2))
     self.set_display_target:text('')
     self.set_display_target:hide()
 
@@ -1399,6 +1401,8 @@ function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gam
             self:hide_controller_icons(h)
         end
     end
+
+    self:update_set_display(player_hotbar, environment)
 end
 
 -- show the dpad and face button icons
