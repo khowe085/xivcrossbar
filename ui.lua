@@ -259,6 +259,14 @@ function ui:setup(theme_options, enchanted_items)
     self.theme.skillchain_open_color_blue = theme_options.skillchain_open_color_blue
     self.theme.skillchain_indicator_offset_x = theme_options.skillchain_indicator_offset_x
     self.theme.skillchain_indicator_offset_y = theme_options.skillchain_indicator_offset_y
+    self.theme.set_display_enabled          = theme_options.set_display_enabled
+    self.theme.set_display_name_font_size   = theme_options.set_display_name_font_size
+    self.theme.set_display_target_font_size = theme_options.set_display_target_font_size
+    self.theme.set_display_width            = theme_options.set_display_width
+    self.theme.set_display_height           = theme_options.set_display_height
+    self.theme.set_display_bounding_box     = theme_options.set_display_bounding_box
+    self.theme.set_display_offset_x         = theme_options.set_display_offset_x
+    self.theme.set_display_offset_y         = theme_options.set_display_offset_y
 
     self.theme.slot_opacity = theme_options.slot_opacity
     self.theme.disabled_slot_opacity = theme_options.disabled_slot_opacity
@@ -302,6 +310,33 @@ function ui:load(theme_options)
     windower.prim.set_position('skillchain_indicator', self:get_slot_x(1, 1) - 10 + self.theme.skillchain_indicator_offset_x, self:get_slot_y(1, 4) - 30 + self.theme.skillchain_indicator_offset_y)
     windower.prim.set_size('skillchain_indicator', 600, 10)
     windower.prim.set_visibility('skillchain_indicator', false)
+
+    local sd_x   = self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x
+    local sd_y   = self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y
+    local sd_w   = self.theme.set_display_width
+    local sd_h   = self.theme.set_display_height
+    local sd_nfs = self.theme.set_display_name_font_size
+    local sd_tfs = self.theme.set_display_target_font_size
+
+    windower.prim.create('set_display_bg')
+    windower.prim.set_color('set_display_bg', 120, 0, 0, 0)
+    windower.prim.set_position('set_display_bg', sd_x, sd_y)
+    windower.prim.set_size('set_display_bg', sd_w, sd_h)
+    windower.prim.set_visibility('set_display_bg', false)
+
+    self.set_display_name = texts.new(text_setup)
+    setup_text(self.set_display_name, theme_options)
+    self.set_display_name:size(sd_nfs)
+    self.set_display_name:pos(sd_x, sd_y)
+    self.set_display_name:text('')
+    self.set_display_name:hide()
+
+    self.set_display_target = texts.new(text_setup)
+    setup_text(self.set_display_target, theme_options)
+    self.set_display_target:size(sd_tfs)
+    self.set_display_target:pos(sd_x, sd_y + math.floor(sd_h / 2))
+    self.set_display_target:text('')
+    self.set_display_target:hide()
 
     self.bar_background = images.new(images_setup)
     self.bar_background_left = images.new(images_setup)
@@ -496,6 +531,45 @@ function ui:hide()
     self.bar_background:hide()
     self.bar_background_left:hide()
     self.bar_background_right:hide()
+    if self.set_display_name then self.set_display_name:hide() end
+    if self.set_display_target then self.set_display_target:hide() end
+    windower.prim.set_visibility('set_display_bg', false)
+end
+
+function ui:update_set_display(player_hotbar, environment)
+    if self.set_display_name == nil or self.set_display_target == nil then return end
+    if not self.theme.set_display_enabled then
+        self.set_display_name:hide()
+        self.set_display_target:hide()
+        windower.prim.set_visibility('set_display_bg', false)
+        return
+    end
+
+    local sd_x = self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x
+    local sd_y = self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y
+    local sd_w = self.theme.set_display_width
+    local sd_h = self.theme.set_display_height
+
+    local env_data = player_hotbar and player_hotbar[environment]
+    local display_name = (env_data and env_data.name) or environment or ''
+    self.set_display_name:text(display_name)
+    local nw, nh = self.set_display_name:extents()
+    self.set_display_name:pos(
+        sd_x + math.max(0, math.floor((sd_w - nw) / 2)),
+        sd_y + math.max(0, math.floor((sd_h / 2 - nh) / 2))
+    )
+    self.set_display_name:show()
+
+    local target_label = player:get_edit_target_label() or ''
+    self.set_display_target:text(target_label)
+    local tw, th = self.set_display_target:extents()
+    self.set_display_target:pos(
+        sd_x + math.max(0, math.floor((sd_w - tw) / 2)),
+        sd_y + math.floor(sd_h / 2) + math.max(0, math.floor((sd_h / 2 - th) / 2))
+    )
+    self.set_display_target:show()
+
+    windower.prim.set_visibility('set_display_bg', self.theme.set_display_bounding_box == true)
 end
 
 function ui:hide_button_hints()
@@ -612,6 +686,7 @@ function ui:load_player_hotbar(player_hotbar, player_vitals, environment, gamepa
             self:load_action(player_hotbar, environment, h, slot, action, player_vitals, shouldDrawThisBar)
         end
     end
+    self:update_set_display(player_hotbar, environment)
 end
 
 function ui:should_show_element(element)
@@ -1362,6 +1437,8 @@ function ui:check_recasts(player_hotbar, player_vitals, environment, spells, gam
             self:hide_controller_icons(h)
         end
     end
+
+    self:update_set_display(player_hotbar, environment)
 end
 
 -- show the dpad and face button icons

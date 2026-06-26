@@ -82,6 +82,7 @@ gamepad_state.right_trigger_doublepress = false
 gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
+local cycle_stack = {}
 local current_arts = nil
 local current_addendum = nil
 -- Scholar arts/addendum are identified by the STATUS (buff) id they grant
@@ -93,6 +94,10 @@ local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
 local is_right_doublepress_window_open = false
+local plus_hold_pending = false
+local plus_hold_gen = 0
+local plus_nav_mode = false
+local plus_nav_gen = 0
 
 local function close_left_doublepress_window()
     is_left_doublepress_window_open = false
@@ -171,6 +176,9 @@ end
 
 function set_edit_target(level_index)
     player:set_edit_target(level_index)
+    if ui.is_setup then
+        ui:update_set_display(player.hotbar, player.hotbar_settings.active_environment)
+    end
 end
 
 function get_edit_target()
@@ -546,6 +554,11 @@ function display_help_menu()
     windower.send_command('echo ' .. left_trigger .. '/' .. right_trigger .. ' Triggers + D-Pad: Navigate button bind utility (when open)')
     windower.send_command('echo ' .. left_trigger .. '/' .. right_trigger .. ' Triggers + D-Pad or ' .. buttons .. ' Button: executes bound action')
     windower.send_command('echo ===============================================')
+    windower.send_command('echo Text Commands (crossbar navigation):')
+    windower.send_command('echo xb next: Switch to the next crossbar set (down in picker)')
+    windower.send_command('echo xb prev: Switch to the previous crossbar set (up in picker)')
+    windower.send_command('echo xb cycle: Push current set and move to next; pop and return on second call')
+    windower.send_command('echo ===============================================')
 end
 
 -----------------------------
@@ -613,6 +626,7 @@ windower.register_event('addon command', function(command, ...)
         return reload_hotbar()
 
     elseif command == 'bar' or command == 'crossbar' or command == 'hotbar' then
+        cycle_stack = {}
         switch_crossbars_command(args)
     elseif command == 'set' then
         set_action_command(args)
@@ -628,6 +642,21 @@ windower.register_event('addon command', function(command, ...)
         update_alias_command(args)
     elseif command == 'n' or command == 'new' then
         new_environment_command(args)
+    elseif command == 'next' then
+        cycle_stack = {}
+        local next_environment = env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment)
+        set_active_environment(next_environment)
+    elseif command == 'prev' then
+        cycle_stack = {}
+        local prev_environment = env_chooser:get_next_environment(player.hotbar, player.hotbar_settings.active_environment)
+        set_active_environment(prev_environment)
+    elseif command == 'cycle' then
+        if #cycle_stack == 0 then
+            table.insert(cycle_stack, player.hotbar_settings.active_environment)
+            set_active_environment(env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment))
+        else
+            set_active_environment(table.remove(cycle_stack))
+        end
     elseif command == 'remap' then
         remap()
     elseif command == 'regenerate' then
@@ -882,14 +911,24 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
     if (env_chooser:is_showing() and pressed) then
         -- handle up and down arrows if the environment chooser is showing
         if gamepad_state.capturing and gamepad.is_dpad_down(dik) then
-            local prev_environment = env_chooser:get_prev_environment(player.hotbar, player.hotbar_settings.active_environment)
+            local prev_environment = env_chooser:get_prev_picker_entry(player.hotbar, player.hotbar_settings.active_environment)
             set_active_environment(prev_environment)
             env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
             return true
         elseif gamepad_state.capturing and gamepad.is_dpad_up(dik) then -- up dpad
-            local next_environment = env_chooser:get_next_environment(player.hotbar, player.hotbar_settings.active_environment)
+            local next_environment = env_chooser:get_next_picker_entry(player.hotbar, player.hotbar_settings.active_environment)
             set_active_environment(next_environment)
             env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+            return true
+        end
+    end
+
+    if (gamepad_state.capturing and plus_nav_mode and not env_chooser:is_showing() and pressed) then
+        if (gamepad.is_dpad_down(dik)) then
+            windower.send_command('xb next')
+            return true
+        elseif (gamepad.is_dpad_up(dik)) then
+            windower.send_command('xb prev')
             return true
         end
     end
@@ -923,10 +962,32 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
 
     if (gamepad_state.capturing and gamepad.is_plus(dik)) then
         if (pressed) then
-            local environments = env_chooser:get_player_environments(player.hotbar)
-            env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+            plus_hold_pending = true
+            plus_hold_gen = plus_hold_gen + 1
+            local gen = plus_hold_gen
+            coroutine.schedule(function()
+                if plus_hold_pending and plus_hold_gen == gen then
+                    plus_hold_pending = false
+                    plus_nav_mode = true
+                    plus_nav_gen = plus_nav_gen + 1
+                    local nav_gen = plus_nav_gen
+                    coroutine.schedule(function()
+                        if plus_nav_mode and plus_nav_gen == nav_gen then
+                            plus_nav_mode = false
+                            env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
+                        end
+                    end, settings.Controls.SetSelectorDelaySeconds - settings.Controls.NavModeDelaySeconds)
+                end
+            end, settings.Controls.NavModeDelaySeconds)
         else
-            env_chooser:hide_player_environments()
+            if plus_hold_pending then
+                plus_hold_pending = false
+                windower.send_command('xb cycle')
+            elseif plus_nav_mode then
+                plus_nav_mode = false
+            else
+                env_chooser:hide_player_environments()
+            end
         end
     end
 end)
