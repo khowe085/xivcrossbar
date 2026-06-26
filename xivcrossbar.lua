@@ -940,7 +940,7 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
                     plus_hold_pending = false
                     env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
                 end
-            end, 1.0)
+            end, 0.5)
         else
             if plus_hold_pending then
                 plus_hold_pending = false
