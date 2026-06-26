@@ -327,20 +327,14 @@ function ui:load(theme_options)
     self.set_display_name = texts.new(text_setup)
     setup_text(self.set_display_name, theme_options)
     self.set_display_name:size(sd_nfs)
-    self.set_display_name:pos(
-      sd_x + math.floor(sd_w / 2),
-      sd_y + math.max(0, math.floor((sd_h / 2 - sd_nfs) / 2))
-    )
+    self.set_display_name:pos(sd_x, sd_y)
     self.set_display_name:text('')
     self.set_display_name:hide()
 
     self.set_display_target = texts.new(text_setup)
     setup_text(self.set_display_target, theme_options)
     self.set_display_target:size(sd_tfs)
-    self.set_display_target:pos(
-      sd_x + math.floor(sd_w / 2),
-      sd_y + math.floor(sd_h / 2) + math.max(0, math.floor((sd_h / 2 - sd_tfs) / 2))
-    )
+    self.set_display_target:pos(sd_x, sd_y + math.floor(sd_h / 2))
     self.set_display_target:text('')
     self.set_display_target:hide()
 
@@ -550,12 +544,31 @@ function ui:update_set_display(player_hotbar, environment)
         windower.prim.set_visibility('set_display_bg', false)
         return
     end
+
+    local sd_x = self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x
+    local sd_y = self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y
+    local sd_w = self.theme.set_display_width
+    local sd_h = self.theme.set_display_height
+
     local env_data = player_hotbar and player_hotbar[environment]
     local display_name = (env_data and env_data.name) or environment or ''
     self.set_display_name:text(display_name)
+    local nw, nh = self.set_display_name:extents()
+    self.set_display_name:pos(
+        sd_x + math.max(0, math.floor((sd_w - nw) / 2)),
+        sd_y + math.max(0, math.floor((sd_h / 2 - nh) / 2))
+    )
     self.set_display_name:show()
-    self.set_display_target:text(player:get_edit_target_label() or '')
+
+    local target_label = player:get_edit_target_label() or ''
+    self.set_display_target:text(target_label)
+    local tw, th = self.set_display_target:extents()
+    self.set_display_target:pos(
+        sd_x + math.max(0, math.floor((sd_w - tw) / 2)),
+        sd_y + math.floor(sd_h / 2) + math.max(0, math.floor((sd_h / 2 - th) / 2))
+    )
     self.set_display_target:show()
+
     windower.prim.set_visibility('set_display_bg', self.theme.set_display_bounding_box == true)
 end
 
