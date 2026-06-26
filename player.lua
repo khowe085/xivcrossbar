@@ -388,6 +388,12 @@ function player:get_edit_target_filename()
     end
 end
 
+function player:get_edit_target_label()
+    local id = self.edit_target_level
+    local labels = { [1] = 'General', [2] = 'Job Default', [3] = 'Job+Sub' }
+    return labels[id] or (self.edit_target_overlay_name or '')
+end
+
 -- find an ability overlay level by name, loading it if not already in hotbar_levels.
 -- load_ability_overlay always appends a level (a saved {JOB}.lua section by reference,
 -- or a transient empty one), so the section is registered in job_data only later, on

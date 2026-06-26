@@ -69,9 +69,11 @@ defaults.Controls.NavModeDelaySeconds     = 0.25
 defaults.Controls.SetSelectorDelaySeconds = 3.0
 
 defaults.SetDisplay = {}
-defaults.SetDisplay.Enabled = true
-defaults.SetDisplay.OffsetX = 0
-defaults.SetDisplay.OffsetY = 0
+defaults.SetDisplay.Enabled         = true
+defaults.SetDisplay.NameFontSize    = 16
+defaults.SetDisplay.TargetFontSize  = 12
+defaults.SetDisplay.OffsetX         = 250
+defaults.SetDisplay.OffsetY         = 0
 
 defaults.Theme = {}
 defaults.Theme.BattleNotice = 'ffxiv'

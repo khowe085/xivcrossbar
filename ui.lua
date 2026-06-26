@@ -259,9 +259,11 @@ function ui:setup(theme_options, enchanted_items)
     self.theme.skillchain_open_color_blue = theme_options.skillchain_open_color_blue
     self.theme.skillchain_indicator_offset_x = theme_options.skillchain_indicator_offset_x
     self.theme.skillchain_indicator_offset_y = theme_options.skillchain_indicator_offset_y
-    self.theme.set_display_enabled  = theme_options.set_display_enabled
-    self.theme.set_display_offset_x = theme_options.set_display_offset_x
-    self.theme.set_display_offset_y = theme_options.set_display_offset_y
+    self.theme.set_display_enabled          = theme_options.set_display_enabled
+    self.theme.set_display_name_font_size   = theme_options.set_display_name_font_size
+    self.theme.set_display_target_font_size = theme_options.set_display_target_font_size
+    self.theme.set_display_offset_x         = theme_options.set_display_offset_x
+    self.theme.set_display_offset_y         = theme_options.set_display_offset_y
 
     self.theme.slot_opacity = theme_options.slot_opacity
     self.theme.disabled_slot_opacity = theme_options.disabled_slot_opacity
@@ -308,13 +310,15 @@ function ui:load(theme_options)
 
     self.set_display_name = texts.new(text_setup)
     setup_text(self.set_display_name, theme_options)
+    self.set_display_name:size(self.theme.set_display_name_font_size)
     self.set_display_name:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y)
     self.set_display_name:text('')
     self.set_display_name:hide()
 
     self.set_display_target = texts.new(text_setup)
     setup_text(self.set_display_target, theme_options)
-    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + 14)
+    self.set_display_target:size(self.theme.set_display_target_font_size)
+    self.set_display_target:pos(self:get_slot_x(1, 1) - 12 + self.theme.set_display_offset_x, self:get_slot_y(1, 4) - 32 + self.theme.set_display_offset_y + 20)
     self.set_display_target:text('')
     self.set_display_target:hide()
 
@@ -515,16 +519,18 @@ function ui:hide()
     if self.set_display_target then self.set_display_target:hide() end
 end
 
-function ui:update_set_display(environment)
+function ui:update_set_display(player_hotbar, environment)
     if self.set_display_name == nil or self.set_display_target == nil then return end
     if not self.theme.set_display_enabled then
         self.set_display_name:hide()
         self.set_display_target:hide()
         return
     end
-    self.set_display_name:text(environment or '')
+    local env_data = player_hotbar and player_hotbar[environment]
+    local display_name = (env_data and env_data.name) or environment or ''
+    self.set_display_name:text(display_name)
     self.set_display_name:show()
-    self.set_display_target:text(player:get_edit_target_filename() or '')
+    self.set_display_target:text(player:get_edit_target_label() or '')
     self.set_display_target:show()
 end
 
@@ -642,7 +648,7 @@ function ui:load_player_hotbar(player_hotbar, player_vitals, environment, gamepa
             self:load_action(player_hotbar, environment, h, slot, action, player_vitals, shouldDrawThisBar)
         end
     end
-    self:update_set_display(environment)
+    self:update_set_display(player_hotbar, environment)
 end
 
 function ui:should_show_element(element)
