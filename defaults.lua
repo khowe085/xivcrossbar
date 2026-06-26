@@ -65,6 +65,8 @@ defaults.Hotbar.HideBattleNotice = false
 defaults.Controls = {}
 defaults.Controls.ToggleBattleMode        = 43
 defaults.Controls.LockDualTriggerToBar3   = false
+defaults.Controls.NavModeDelaySeconds     = 0.25
+defaults.Controls.SetSelectorDelaySeconds = 3.0
 
 defaults.Theme = {}
 defaults.Theme.BattleNotice = 'ffxiv'
