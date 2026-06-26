@@ -28,6 +28,21 @@ local maybe_get_custom_icon = function(default_icon, custom_icon)
     end
 end
 
+-- Returns the absolute filesystem path for an action's spell/ability icon, or nil.
+local function resolve_action_icon_path(action)
+    if action == nil then return nil end
+    local key = kebab_casify(action.action)
+    local entry = crossbar_abilities[key] or crossbar_spells[key]
+    if entry ~= nil then
+        local icon_path = maybe_get_custom_icon(entry.default_icon, entry.custom_icon)
+        return windower.addon_path .. icon_path
+    end
+    if action.icon ~= nil then
+        return windower.addon_path .. '/images/' .. get_icon_pathbase() .. '/' .. action.icon .. '.png'
+    end
+    return nil
+end
+
 local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
@@ -1198,39 +1213,53 @@ function action_binder:display_swap_confirmer()
 
     local action_a = self.get_action(self.swap_source_crossbar, self.swap_source_hotkey)
     local action_b = self.get_action(self.swap_target_crossbar, self.swap_target_hotkey)
-    local name_a = (action_a and (action_a.alias or action_a.action)) or '(empty)'
-    local name_b = (action_b and (action_b.alias or action_b.action)) or '(empty)'
+    local name_a    = (action_a and (action_a.alias or action_a.action)) or '(empty)'
+    local name_b    = (action_b and (action_b.alias or action_b.action)) or '(empty)'
+    local ability_icon_a = resolve_action_icon_path(action_a)
+    local ability_icon_b = resolve_action_icon_path(action_b)
 
-    local src_icons = self:get_combo_icons(self.swap_source_crossbar, self.swap_source_hotkey)
-    local tgt_icons = self:get_combo_icons(self.swap_target_crossbar, self.swap_target_hotkey)
+    local src_combo = self:get_combo_icons(self.swap_source_crossbar, self.swap_source_hotkey)
+    local tgt_combo = self:get_combo_icons(self.swap_target_crossbar, self.swap_target_hotkey)
 
-    local total_width = (#src_icons + #tgt_icons) * 40 + 60
-    local center = self.width / 2
-    local start_x = self.base_x + center - total_width / 2
-    local icon_y  = self.base_y + self.height / 2
+    -- Horizontal layout driven by combo icon count, same centering as before
+    local total_width = (#src_combo + #tgt_combo) * 40 + 60
+    local start_x    = self.base_x + self.width / 2 - total_width / 2
+    local arrow_x    = start_x + #src_combo * 40 + 10
+    local tgt_start  = arrow_x + 50
 
-    for i, icon_path in ipairs(src_icons) do
-        self:show_icon(icon_path, start_x + (i - 1) * 40, icon_y)
-    end
+    -- Vertical layout: name → ability icon → combo icons (top to bottom)
+    local center_y  = self.base_y + self.height / 2
+    local name_y    = center_y - 70
+    local ability_y = center_y - 30
+    local combo_y   = center_y + 20
 
-    local arrow_x = start_x + #src_icons * 40 + 10
-    local arrow = self:create_text('<->', arrow_x, icon_y + 10)
-    arrow:size(14)
-    self.hints:append(arrow)
-
-    local tgt_start = arrow_x + 50
-    for i, icon_path in ipairs(tgt_icons) do
-        self:show_icon(icon_path, tgt_start + (i - 1) * 40, icon_y)
-    end
-
-    local label_y = icon_y + 50
-    local label_a = self:create_text(name_a, start_x, label_y)
+    -- Action names
+    local label_a = self:create_text(name_a, start_x, name_y)
     label_a:size(13)
     self.hints:append(label_a)
 
-    local label_b = self:create_text(name_b, tgt_start, label_y)
+    local label_b = self:create_text(name_b, tgt_start, name_y)
     label_b:size(13)
     self.hints:append(label_b)
+
+    -- Ability icons centered over their respective combo group
+    local src_center_x = start_x + (#src_combo * 40) / 2 - 16
+    local tgt_center_x = tgt_start + (#tgt_combo * 40) / 2 - 16
+    self:show_action_icon_abs(ability_icon_a, src_center_x, ability_y)
+    self:show_action_icon_abs(ability_icon_b, tgt_center_x, ability_y)
+
+    -- Arrow between the two sides
+    local arrow = self:create_text('<->', arrow_x, ability_y + 8)
+    arrow:size(14)
+    self.hints:append(arrow)
+
+    -- Button combo icons
+    for i, p in ipairs(src_combo) do
+        self:show_icon(p, start_x + (i - 1) * 40, combo_y)
+    end
+    for i, p in ipairs(tgt_combo) do
+        self:show_icon(p, tgt_start + (i - 1) * 40, combo_y)
+    end
 
     self:show_control_hints('Confirm', 'Go Back')
 end
@@ -1248,6 +1277,19 @@ function action_binder:show_icon(path, x, y)
     local icon = images.new({draggable = false})
     local icon_path = windower.addon_path .. 'images/' .. get_icon_pathbase() .. '/' .. path
     icon:path(icon_path)
+    icon:repeat_xy(1, 1)
+    icon:draggable(false)
+    icon:fit(true)
+    icon:alpha(255)
+    icon:show()
+    icon:pos(x, y)
+    self.images:append(icon)
+end
+
+function action_binder:show_action_icon_abs(full_path, x, y)
+    if full_path == nil then return end
+    local icon = images.new({draggable = false})
+    icon:path(full_path)
     icon:repeat_xy(1, 1)
     icon:draggable(false)
     icon:fit(true)
