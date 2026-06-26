@@ -698,6 +698,14 @@ function player:create_new_environment(name)
             end
         end
 
+        local max_order = 0
+        for _, env in pairs(self.hotbar) do
+            if (env.order or 0) > max_order then
+                max_order = env.order or 0
+            end
+        end
+        new_environment['order'] = max_order + 1
+
         local idx = self:resolve_edit_level(nil, nil, nil)
         self.hotbar_levels[idx].data.sets[kebab_casify(name)] = new_environment
         self.dirty_levels[idx] = true
