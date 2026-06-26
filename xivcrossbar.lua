@@ -95,6 +95,7 @@ local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
 local is_right_doublepress_window_open = false
 local plus_hold_pending = false
+local plus_hold_gen = 0
 
 local function close_left_doublepress_window()
     is_left_doublepress_window_open = false
@@ -932,8 +933,10 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
     if (gamepad_state.capturing and gamepad.is_plus(dik)) then
         if (pressed) then
             plus_hold_pending = true
+            plus_hold_gen = plus_hold_gen + 1
+            local gen = plus_hold_gen
             coroutine.schedule(function()
-                if plus_hold_pending then
+                if plus_hold_pending and plus_hold_gen == gen then
                     plus_hold_pending = false
                     env_chooser:show_player_environments(player.hotbar, player.hotbar_settings.active_environment)
                 end
