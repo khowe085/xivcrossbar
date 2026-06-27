@@ -155,6 +155,21 @@ function delete_hotkey(hotbar, slot)
     set_active_environment(environment)
 end
 
+function swap_hotkey(hotbar_a, slot_a, hotbar_b, slot_b)
+    local environment = player.hotbar_settings.active_environment
+    player:swap_action(environment, hotbar_a, slot_a, hotbar_b, slot_b)
+    player:save_hotbar()
+    reload_hotbar()
+    set_active_environment(environment)
+end
+
+function get_action_at(hotbar, slot)
+    local environment = player.hotbar_settings.active_environment
+    if player.hotbar[environment] == nil then return nil end
+    if player.hotbar[environment]['hotbar_' .. hotbar] == nil then return nil end
+    return player.hotbar[environment]['hotbar_' .. hotbar]['slot_' .. slot]
+end
+
 function get_crossbar_sets()
     return player:get_crossbar_names()
 end
@@ -206,7 +221,7 @@ function initialize()
 
     if (buttonmapping.validate()) then
         theme_options.button_layout = buttonmapping.button_layout
-        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, swap_hotkey, get_action_at, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     else
         theme_options.button_layout = 'nintendo'
         local temp_buttonmapping = {}
@@ -216,7 +231,7 @@ function initialize()
         theme_options.activewindow_button = 'x'
         gamepad_mapper:setup(buttonmapping, start_controller_wrappers, theme_options, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
         gamepad_mapper:show(true)
-        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
+        action_binder:setup(temp_buttonmapping, set_hotkey, delete_hotkey, theme_options, get_crossbar_sets, set_edit_target, get_edit_target, get_edit_target_filename, swap_hotkey, get_action_at, 150, 150, windower.get_windower_settings().ui_x_res - 300, windower.get_windower_settings().ui_y_res - y_adjust)
     end
 
     player:initialize(windower_player, server, theme_options, enchanted_items)

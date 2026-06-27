@@ -28,6 +28,21 @@ local maybe_get_custom_icon = function(default_icon, custom_icon)
     end
 end
 
+-- Returns the absolute filesystem path for an action's spell/ability icon, or nil.
+local function resolve_action_icon_path(action)
+    if action == nil then return nil end
+    local key = kebab_casify(action.action)
+    local entry = crossbar_abilities[key] or crossbar_spells[key]
+    if entry ~= nil then
+        local icon_path = maybe_get_custom_icon(entry.default_icon, entry.custom_icon)
+        return windower.addon_path .. icon_path
+    end
+    if action.icon ~= nil then
+        return windower.addon_path .. '/images/' .. get_icon_pathbase() .. '/' .. action.icon .. '.png'
+    end
+    return nil
+end
+
 local left_trigger_lifted_during_doublepress_window = false
 local right_trigger_lifted_during_doublepress_window = false
 local is_left_doublepress_window_open = false
@@ -52,7 +67,10 @@ local states = {
     ['SELECT_BUTTON_ASSIGNMENT'] = 5,
     ['CONFIRM_BUTTON_ASSIGNMENT'] = 6,
     ['SHOW_CREDITS'] = 7,
-    ['SELECT_EDIT_FILE'] = 8
+    ['SELECT_EDIT_FILE'] = 8,
+    ['SELECT_SWAP_SOURCE'] = 9,
+    ['SELECT_SWAP_TARGET'] = 10,
+    ['CONFIRM_SWAP']       = 11,
 }
 
 local action_types = {
@@ -90,7 +108,8 @@ local action_types = {
     ['SWITCH_CROSSBARS'] = 31,
     ['MOVE_CROSSBARS'] = 32,
     ['SHOW_CREDITS'] = 33,
-    ['SELECT_EDIT_FILE'] = 34
+    ['SELECT_EDIT_FILE'] = 34,
+    ['SWAP_SLOTS'] = 35,
 }
 
 local prefix_lookup = {
@@ -148,7 +167,7 @@ local SPELL_TYPE_LOOKUP = {
     ['SummonerPact'] = 'summoning magic',
 }
 
-function action_binder:setup(buttonmapping, save_binding_func, delete_binding_func, theme_options, get_crossbar_sets_func, set_edit_target_func, get_edit_target_func, get_edit_target_filename_func, base_x, base_y, max_width, max_height)
+function action_binder:setup(buttonmapping, save_binding_func, delete_binding_func, theme_options, get_crossbar_sets_func, set_edit_target_func, get_edit_target_func, get_edit_target_filename_func, swap_binding_func, get_action_func, base_x, base_y, max_width, max_height)
     self.button_layout = buttonmapping.button_layout
     self.confirm_button = buttonmapping.confirm_button
     self.cancel_button = buttonmapping.cancel_button
@@ -160,6 +179,8 @@ function action_binder:setup(buttonmapping, save_binding_func, delete_binding_fu
     self.set_edit_target_binding = set_edit_target_func
     self.get_edit_target_binding = get_edit_target_func
     self.get_edit_target_filename_binding = get_edit_target_filename_func
+    self.swap_binding = swap_binding_func
+    self.get_action   = get_action_func
     self.is_hidden = true
     self.selector = require('ui/selectablelist')
     self.selector:setup(theme_options, base_x + 50, base_y + 75, max_width - 100, max_height - 175)
@@ -226,6 +247,10 @@ function action_binder:reset_state()
     self.selector:hide()
     self.images = L{}
     self.hints = L{}
+    self.swap_source_crossbar = nil
+    self.swap_source_hotkey   = nil
+    self.swap_target_crossbar = nil
+    self.swap_target_hotkey   = nil
 end
 
 function action_binder:reset_gamepad()
@@ -306,7 +331,9 @@ function action_binder:update_active_crossbar(left_trigger_just_pressed, right_t
 end
 
 function action_binder:dpad_left(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.dpad_left_pressed = pressed
@@ -324,7 +351,9 @@ function action_binder:dpad_left(pressed)
 end
 
 function action_binder:dpad_right(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.dpad_right_pressed = pressed
@@ -342,7 +371,9 @@ function action_binder:dpad_right(pressed)
 end
 
 function action_binder:dpad_down(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.dpad_down_pressed = pressed
@@ -360,7 +391,9 @@ function action_binder:dpad_down(pressed)
 end
 
 function action_binder:dpad_up(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.dpad_up_pressed = pressed
@@ -378,7 +411,9 @@ function action_binder:dpad_up(pressed)
 end
 
 function action_binder:button_a(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.button_a_pressed = pressed
@@ -403,7 +438,9 @@ function action_binder:button_a(pressed)
 end
 
 function action_binder:button_b(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.button_b_pressed = pressed
@@ -428,7 +465,9 @@ function action_binder:button_b(pressed)
 end
 
 function action_binder:button_x(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.button_x_pressed = pressed
@@ -453,7 +492,9 @@ function action_binder:button_x(pressed)
 end
 
 function action_binder:button_y(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         self:reset_gamepad_dpad()
         self:reset_gamepad_face_buttons()
         self.button_y_pressed = pressed
@@ -478,7 +519,9 @@ function action_binder:button_y(pressed)
 end
 
 function action_binder:trigger_left(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         local just_pressed = pressed and not self.trigger_left_pressed
         local just_released = self.trigger_left_pressed and not pressed
         local only_left_trigger_just_pressed = just_pressed and not self.trigger_right_pressed
@@ -507,7 +550,9 @@ function action_binder:trigger_left(pressed)
 end
 
 function action_binder:trigger_right(pressed)
-    if (self.state == states.SELECT_BUTTON_ASSIGNMENT) then
+    if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
+        self.state == states.SELECT_SWAP_SOURCE or
+        self.state == states.SELECT_SWAP_TARGET) then
         local just_pressed = pressed and not self.trigger_right_pressed
         local just_released = self.trigger_right_pressed and not pressed
         local only_right_trigger_just_pressed = just_pressed and not self.trigger_left_pressed
@@ -594,6 +639,9 @@ function action_binder:submit_selected_option()
             self.action_target = nil
             self.state = states.SELECT_BUTTON_ASSIGNMENT
             self:display_button_assigner()
+        elseif (self.action_type == action_types.SWAP_SLOTS) then
+            self.state = states.SELECT_SWAP_SOURCE
+            self:display_swap_assigner(true)
         else
             self.state = states.SELECT_ACTION
             self:display_action_selector()
@@ -669,6 +717,18 @@ function action_binder:submit_selected_option()
         else
             self:assign_action()
         end
+    elseif (self.state == states.SELECT_SWAP_SOURCE) then
+        self.swap_source_crossbar = self.active_crossbar
+        self.swap_source_hotkey   = self.hotkey
+        self.state = states.SELECT_SWAP_TARGET
+        self:display_swap_assigner(false)
+    elseif (self.state == states.SELECT_SWAP_TARGET) then
+        self.swap_target_crossbar = self.active_crossbar
+        self.swap_target_hotkey   = self.hotkey
+        self.state = states.CONFIRM_SWAP
+        self:display_swap_confirmer()
+    elseif (self.state == states.CONFIRM_SWAP) then
+        self:execute_swap()
     end
 end
 
@@ -752,6 +812,23 @@ function action_binder:go_back()
         self.active_crossbar = nil
         self.hotkey = nil
         self:display_button_assigner()
+    elseif (self.state == states.CONFIRM_SWAP) then
+        self.state = states.SELECT_SWAP_TARGET
+        self.swap_target_crossbar = nil
+        self.swap_target_hotkey   = nil
+        self:display_swap_assigner(false)
+    elseif (self.state == states.SELECT_SWAP_TARGET) then
+        self.state = states.SELECT_SWAP_SOURCE
+        self.swap_source_crossbar = nil
+        self.swap_source_hotkey   = nil
+        self:display_swap_assigner(true)
+    elseif (self.state == states.SELECT_SWAP_SOURCE) then
+        self.state = states.SELECT_ACTION_TYPE
+        self.action_type = nil
+        self.selector:set_page(self.selection_states[states.SELECT_ACTION_TYPE].page)
+        self:display_action_type_selector()
+        self.selector:import_selection_state(self.selection_states[states.SELECT_ACTION_TYPE])
+        self.selection_states[states.SELECT_ACTION_TYPE] = nil
     end
 end
 
@@ -796,6 +873,7 @@ function action_binder:display_action_type_selector()
 
     local action_type_list = L{}
     action_type_list:append({id = action_types.DELETE, name = 'Remove a Binding', icon = 'images/' ..get_icon_pathbase() .. '/ui/red-x.png'})
+    action_type_list:append({id = action_types.SWAP_SLOTS, name = 'Swap Slots', icon = 'images/' .. get_icon_pathbase() .. '/abilities/sange.png'})
     action_type_list:append({id = action_types.JOB_ABILITY, name = 'Job Ability', icon = 'images/icons/abilities/00001.png', icon_offset = 4})
     action_type_list:append({id = action_types.WEAPONSKILL, name = 'Weaponskill', icon = 'images/icons/weapons/sword.png', icon_offset = 4})
     if (pet_jobs[main_job] or pet_jobs[sub_job]) then
@@ -1058,10 +1136,159 @@ function action_binder:delete_action()
     self:reset_state()
 end
 
+function action_binder:display_swap_assigner(is_source)
+    local step = is_source and 'Step 1 of 2' or 'Step 2 of 2'
+    self.title:text('Swap Slots - ' .. step)
+    self.title:show()
+
+    self:reset_gamepad()
+    self.selector:hide()
+    windower.prim.set_visibility('button_entry_bg', true)
+
+    for _, image in ipairs(self.images) do image:hide() end
+    for _, hint in ipairs(self.hints) do hint:hide() end
+
+    local caption_text = is_source
+        and 'Press the button combo for the FIRST slot to swap'
+        or  'Press the button combo for the SECOND slot to swap'
+
+    local caption_x = self.base_x + self.width / 2 - 200
+    local caption_y = self.base_y + self.height / 2 - 40
+    local caption = self:create_text(caption_text, caption_x, caption_y)
+    caption:size(14)
+    self.hints:append(caption)
+    self:show_exit_hint()
+end
+
+function action_binder:get_combo_icons(crossbar, hotkey)
+    local icons = L{}
+    if crossbar == 1 then
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_left.png')
+        icons:append('ui/binding_icons/plus.png')
+    elseif crossbar == 2 then
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_right.png')
+        icons:append('ui/binding_icons/plus.png')
+    elseif crossbar == 3 then
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_right.png')
+        icons:append('ui/binding_icons/arrow_right.png')
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_left.png')
+        icons:append('ui/binding_icons/plus.png')
+    elseif crossbar == 4 then
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_left.png')
+        icons:append('ui/binding_icons/arrow_right.png')
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_right.png')
+        icons:append('ui/binding_icons/plus.png')
+    elseif crossbar == 5 then
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_left.png')
+        icons:append('ui/binding_icons/x2.png')
+        icons:append('ui/binding_icons/plus.png')
+    elseif crossbar == 6 then
+        icons:append('ui/binding_icons/trigger_' .. self.button_layout .. '_right.png')
+        icons:append('ui/binding_icons/x2.png')
+        icons:append('ui/binding_icons/plus.png')
+    end
+    local button_icons = {
+        [1] = 'dpad_' .. self.button_layout .. '_left.png',
+        [2] = 'dpad_' .. self.button_layout .. '_down.png',
+        [3] = 'dpad_' .. self.button_layout .. '_right.png',
+        [4] = 'dpad_' .. self.button_layout .. '_up.png',
+        [5] = 'facebuttons_' .. self.button_layout .. '_b.png',
+        [6] = 'facebuttons_' .. self.button_layout .. '_a.png',
+        [7] = 'facebuttons_' .. self.button_layout .. '_x.png',
+        [8] = 'facebuttons_' .. self.button_layout .. '_y.png',
+    }
+    if button_icons[hotkey] then
+        icons:append('ui/binding_icons/' .. button_icons[hotkey])
+    end
+    return icons
+end
+
+function action_binder:display_swap_confirmer()
+    self.title:text('Confirm Swap')
+    self.title:show()
+
+    self.selector:hide()
+    for _, image in ipairs(self.images) do image:hide() end
+    for _, hint in ipairs(self.hints) do hint:hide() end
+
+    local action_a = self.get_action(self.swap_source_crossbar, self.swap_source_hotkey)
+    local action_b = self.get_action(self.swap_target_crossbar, self.swap_target_hotkey)
+    local name_a    = (action_a and (action_a.alias or action_a.action)) or '(empty)'
+    local name_b    = (action_b and (action_b.alias or action_b.action)) or '(empty)'
+    local ability_icon_a = resolve_action_icon_path(action_a)
+    local ability_icon_b = resolve_action_icon_path(action_b)
+
+    local src_combo = self:get_combo_icons(self.swap_source_crossbar, self.swap_source_hotkey)
+    local tgt_combo = self:get_combo_icons(self.swap_target_crossbar, self.swap_target_hotkey)
+
+    -- Horizontal layout driven by combo icon count, same centering as before
+    local total_width = (#src_combo + #tgt_combo) * 40 + 60
+    local start_x    = self.base_x + self.width / 2 - total_width / 2
+    local arrow_x    = start_x + #src_combo * 40 + 10
+    local tgt_start  = arrow_x + 50
+
+    -- Vertical layout: name → ability icon → combo icons (top to bottom)
+    local center_y  = self.base_y + self.height / 2
+    local name_y    = center_y - 70
+    local ability_y = center_y - 30
+    local combo_y   = center_y + 20
+
+    -- Ability icons centered over their respective combo group
+    local src_center_x = start_x + (#src_combo * 40) / 2 - 16
+    local tgt_center_x = tgt_start + (#tgt_combo * 40) / 2 - 16
+    self:show_action_icon_abs(ability_icon_a, src_center_x, ability_y)
+    self:show_action_icon_abs(ability_icon_b, tgt_center_x, ability_y)
+
+    -- Button combo icons
+    for i, p in ipairs(src_combo) do
+        self:show_icon(p, start_x + (i - 1) * 40, combo_y)
+    end
+    for i, p in ipairs(tgt_combo) do
+        self:show_icon(p, tgt_start + (i - 1) * 40, combo_y)
+    end
+
+    -- show_control_hints clears self.hints; create name labels and arrow after it
+    self:show_control_hints('Confirm', 'Go Back')
+
+    local label_a = self:create_text(name_a, start_x, name_y)
+    label_a:size(13)
+    self.hints:append(label_a)
+
+    local label_b = self:create_text(name_b, tgt_start, name_y)
+    label_b:size(13)
+    self.hints:append(label_b)
+
+    local arrow = self:create_text('<->', arrow_x, ability_y + 8)
+    arrow:size(14)
+    self.hints:append(arrow)
+end
+
+function action_binder:execute_swap()
+    self.swap_binding(
+        self.swap_source_crossbar, self.swap_source_hotkey,
+        self.swap_target_crossbar, self.swap_target_hotkey
+    )
+    self:hide()
+    self:reset_state()
+end
+
 function action_binder:show_icon(path, x, y)
     local icon = images.new({draggable = false})
     local icon_path = windower.addon_path .. 'images/' .. get_icon_pathbase() .. '/' .. path
     icon:path(icon_path)
+    icon:repeat_xy(1, 1)
+    icon:draggable(false)
+    icon:fit(true)
+    icon:alpha(255)
+    icon:show()
+    icon:pos(x, y)
+    self.images:append(icon)
+end
+
+function action_binder:show_action_icon_abs(full_path, x, y)
+    if full_path == nil then return end
+    local icon = images.new({draggable = false})
+    icon:path(full_path)
     icon:repeat_xy(1, 1)
     icon:draggable(false)
     icon:fit(true)

@@ -228,7 +228,7 @@ function player:merge_levels()
             for key, value in pairs(hotbars) do
                 if key == 'name' or key == 'order' then
                     self.hotbar[environment][key] = value
-                else
+                elseif type(value) == 'table' then
                     -- key is a hotbar_N table of slots
                     if self.hotbar[environment][key] == nil then
                         self.hotbar[environment][key] = {}
@@ -637,6 +637,43 @@ function player:copy_action(environment, hotbar, slot, to_environment, to_hotbar
         end
     end
 
+    self:merge_levels()
+end
+
+-- swap two actions within the same environment. Both source and target land in the
+-- level returned by resolve_edit_level for slot_a.
+function player:swap_action(environment, hotbar_a, slot_a, hotbar_b, slot_b)
+    if environment == 'b' then environment = 'battle' elseif environment == 'f' then environment = 'field' end
+    if slot_a == 10 then slot_a = 0 end
+    if slot_b == 10 then slot_b = 0 end
+
+    local env_key = kebab_casify(environment)
+    if self.hotbar[env_key] == nil then return end
+
+    local action_a = self.hotbar[env_key]['hotbar_' .. hotbar_a] and
+                     self.hotbar[env_key]['hotbar_' .. hotbar_a]['slot_' .. slot_a]
+    local action_b = self.hotbar[env_key]['hotbar_' .. hotbar_b] and
+                     self.hotbar[env_key]['hotbar_' .. hotbar_b]['slot_' .. slot_b]
+
+    local has_a = action_a ~= nil and action_a.action ~= nil
+    local has_b = action_b ~= nil and action_b.action ~= nil
+    if not has_a and not has_b then return end
+
+    local idx = self:resolve_edit_level(environment, hotbar_a, slot_a)
+    local target = self.hotbar_levels[idx].data.sets
+
+    if target[env_key] == nil then
+        target[env_key] = {}
+        target[env_key]['name'] = self.hotbar[env_key]['name'] or environment
+        self:setup_environment_hotbars(target, env_key)
+    end
+    target[env_key]['hotbar_' .. hotbar_a] = target[env_key]['hotbar_' .. hotbar_a] or {}
+    target[env_key]['hotbar_' .. hotbar_b] = target[env_key]['hotbar_' .. hotbar_b] or {}
+
+    target[env_key]['hotbar_' .. hotbar_a]['slot_' .. slot_a] = has_b and shallow_copy_action(action_b) or nil
+    target[env_key]['hotbar_' .. hotbar_b]['slot_' .. slot_b] = has_a and shallow_copy_action(action_a) or nil
+
+    self.dirty_levels[idx] = true
     self:merge_levels()
 end
 
