@@ -79,6 +79,8 @@ gamepad_state.left_trigger = false
 gamepad_state.left_trigger_doublepress = false
 gamepad_state.right_trigger = false
 gamepad_state.right_trigger_doublepress = false
+gamepad_state.left_ctrl = false
+gamepad_state.right_ctrl = false
 gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
@@ -720,7 +722,9 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
     elseif (gamepad.is_right_trigger(dik)) then
         gamepad_state.right_trigger = pressed
     elseif (dik == keyboard.ctrl) then
-        gamepad_state.capturing = pressed
+        gamepad_state.left_ctrl = pressed
+    elseif (dik == keyboard.right_ctrl) then
+        gamepad_state.right_ctrl = pressed
     elseif (dik == keyboard.shift) then
         shift_pressed = pressed
     elseif (gamepad.is_minus(dik)) then
@@ -728,6 +732,10 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
     elseif (gamepad.is_plus(dik)) then
         gamepad_state.plus_button = pressed
     end
+
+    -- Derive capturing from all soft-pull modifiers so Steam Input's non-reference-counted
+    -- shared Ctrl can't collapse the crossbar while another trigger/modifier is still held.
+    gamepad_state.capturing = gamepad_state.left_ctrl or gamepad_state.right_ctrl or gamepad_state.left_trigger or gamepad_state.right_trigger or gamepad_state.plus_button or gamepad_state.minus_button
 
     local only_left_trigger_just_pressed = left_trigger_just_pressed and not gamepad_state.right_trigger
     if (not is_left_doublepress_window_open and only_left_trigger_just_pressed) then

@@ -62,6 +62,7 @@ keyboard.e = 18
 
 keyboard.enter = 28
 keyboard.ctrl = 29
+keyboard.right_ctrl = 157
 keyboard.backspace = 14
 
 keyboard.shift = 42
