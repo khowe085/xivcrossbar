@@ -134,3 +134,29 @@ OR (for 2026 Steam Controller users)
 NOTE: The crossbar unbinds any existing bindings for Ctrl+F1 through Ctrl+F12 because it uses those buttons as proxies for the gamepad. Any Alt, Shift, or neutral bindings to F1-F12 will be unaffected. Ctrl is used for the bindings rather than Alt because Alt has a tendency to get "stuck" when Alt-Tabbing in and out, and can lead to accidental ability use. However, while Ctrl+F9 through Ctrl+F12 are completely locked down by this addon, you can re-add your Ctrl+F1 through Ctrl+F8 bindings by editing function_key_bindings.lua.
 
 NOTE: in order to capture dpad inputs without affecting the underlying game, you will need to hold down at least one of the triggers for XIVCrossbar to be able to use its input. This should really only be noticeable when navigating the gamepad binding utility.
+
+## Steam Input mapping
+
+When proxying gamepad inputs through Steam Input (rather than AHK), map the trigger soft-pulls to separate Ctrl keys so that holding both triggers does not collapse the crossbar when one is released:
+
+- LT soft-pull → Left Ctrl
+- LT full-pull → Left Ctrl + F11 → selects crossbar 1
+- RT soft-pull → Right Ctrl
+- RT full-pull → Right Ctrl + F12 → selects crossbar 2
+- LT + RT (both full-pulled) → crossbars 3/4 (order-dependent: L→R is crossbar 4, R→L is crossbar 3)
+- Double-press a trigger → crossbar 5 (LT) / crossbar 6 (RT)
+- Plus button → Ctrl + F10 (binding set selector)
+- Minus button → Ctrl + F9 (gamepad binding utility)
+
+The bundled AHK script only ever emits a generic Ctrl (= Left Ctrl), so it continues to work unchanged; the separate Right Ctrl is only needed for Steam Input.
+
+### Rear paddles → crossbars 5/6
+
+The rear paddles get their own dedicated keys that map directly to crossbars 5/6, with **no Ctrl and no double-press emulation**:
+
+- Left rear paddle (L4) → **Home** (DIK 199) → crossbar 5
+- Right rear paddle (R4) → **Page Up** (DIK 201) → crossbar 6
+
+Hold a paddle and press a face button or dpad direction to fire its crossbar-5/6 action, exactly like holding a trigger. Because the paddle keys carry no Ctrl, pressing or releasing a paddle while a trigger is held can never drop the trigger's shared Ctrl, so the crossbar no longer collapses in that case. The trigger double-press route to crossbars 5/6 still works, so this is purely additive.
+
+Map the paddles in Steam Input to a plain Home / Page Up key press (single tap, no modifier). Because FFXI reads Home and Page Up as camera controls through DirectInput, the addon **binds Home and Page Up to a silent no-op** while it is loaded so the paddles do not move the camera; the keys are released back to the game on unload (`//lua unload xivcrossbar`).

@@ -518,29 +518,37 @@ function action_binder:button_y(pressed)
     end
 end
 
-function action_binder:trigger_left(pressed)
+-- doublepress_override (optional): when true, force this side's doublepressed state to match
+-- `pressed`. Used by the dedicated rear-paddle keys, which map directly to bars 5/6 with no
+-- double-press emulation. When nil, the normal trigger double-press timing applies.
+function action_binder:trigger_left(pressed, doublepress_override)
     if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
         self.state == states.SELECT_SWAP_SOURCE or
         self.state == states.SELECT_SWAP_TARGET) then
         local just_pressed = pressed and not self.trigger_left_pressed
         local just_released = self.trigger_left_pressed and not pressed
-        local only_left_trigger_just_pressed = just_pressed and not self.trigger_right_pressed
 
-        if (not is_left_doublepress_window_open and only_left_trigger_just_pressed) then
-            is_left_doublepress_window_open = true
-            is_right_doublepress_window_open = false
-            coroutine.schedule(close_left_doublepress_window, 0.5)
-        end
-        local only_left_trigger_just_released = just_released and not self.trigger_right_pressed
-        if (is_left_doublepress_window_open and only_left_trigger_just_released) then
-            left_trigger_lifted_during_doublepress_window = true
-        end
-        if (only_left_trigger_just_pressed and is_left_doublepress_window_open and left_trigger_lifted_during_doublepress_window) then
-            self.trigger_left_doublepressed = true
-            close_left_doublepress_window()
-        end
-        if (just_released and self.trigger_left_doublepressed) then
-            self.trigger_left_doublepressed = false
+        if (doublepress_override) then
+            self.trigger_left_doublepressed = pressed
+        else
+            local only_left_trigger_just_pressed = just_pressed and not self.trigger_right_pressed
+
+            if (not is_left_doublepress_window_open and only_left_trigger_just_pressed) then
+                is_left_doublepress_window_open = true
+                is_right_doublepress_window_open = false
+                coroutine.schedule(close_left_doublepress_window, 0.5)
+            end
+            local only_left_trigger_just_released = just_released and not self.trigger_right_pressed
+            if (is_left_doublepress_window_open and only_left_trigger_just_released) then
+                left_trigger_lifted_during_doublepress_window = true
+            end
+            if (only_left_trigger_just_pressed and is_left_doublepress_window_open and left_trigger_lifted_during_doublepress_window) then
+                self.trigger_left_doublepressed = true
+                close_left_doublepress_window()
+            end
+            if (just_released and self.trigger_left_doublepressed) then
+                self.trigger_left_doublepressed = false
+            end
         end
 
         self.trigger_left_pressed = pressed
@@ -549,29 +557,34 @@ function action_binder:trigger_left(pressed)
     end
 end
 
-function action_binder:trigger_right(pressed)
+function action_binder:trigger_right(pressed, doublepress_override)
     if (self.state == states.SELECT_BUTTON_ASSIGNMENT or
         self.state == states.SELECT_SWAP_SOURCE or
         self.state == states.SELECT_SWAP_TARGET) then
         local just_pressed = pressed and not self.trigger_right_pressed
         local just_released = self.trigger_right_pressed and not pressed
-        local only_right_trigger_just_pressed = just_pressed and not self.trigger_left_pressed
 
-        if (not is_right_doublepress_window_open and only_right_trigger_just_pressed) then
-            is_right_doublepress_window_open = true
-            is_left_doublepress_window_open = false
-            coroutine.schedule(close_right_doublepress_window, 0.5)
-        end
-        local only_right_trigger_just_released = just_released and not self.trigger_left_pressed
-        if (is_right_doublepress_window_open and only_right_trigger_just_released) then
-            right_trigger_lifted_during_doublepress_window = true
-        end
-        if (only_right_trigger_just_pressed and is_right_doublepress_window_open and right_trigger_lifted_during_doublepress_window) then
-            self.trigger_right_doublepressed = true
-            close_right_doublepress_window()
-        end
-        if (just_released and self.trigger_right_doublepressed) then
-            self.trigger_right_doublepressed = false
+        if (doublepress_override) then
+            self.trigger_right_doublepressed = pressed
+        else
+            local only_right_trigger_just_pressed = just_pressed and not self.trigger_left_pressed
+
+            if (not is_right_doublepress_window_open and only_right_trigger_just_pressed) then
+                is_right_doublepress_window_open = true
+                is_left_doublepress_window_open = false
+                coroutine.schedule(close_right_doublepress_window, 0.5)
+            end
+            local only_right_trigger_just_released = just_released and not self.trigger_left_pressed
+            if (is_right_doublepress_window_open and only_right_trigger_just_released) then
+                right_trigger_lifted_during_doublepress_window = true
+            end
+            if (only_right_trigger_just_pressed and is_right_doublepress_window_open and right_trigger_lifted_during_doublepress_window) then
+                self.trigger_right_doublepressed = true
+                close_right_doublepress_window()
+            end
+            if (just_released and self.trigger_right_doublepressed) then
+                self.trigger_right_doublepressed = false
+            end
         end
 
         self.trigger_right_pressed = pressed

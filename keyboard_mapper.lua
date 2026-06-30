@@ -62,6 +62,7 @@ keyboard.e = 18
 
 keyboard.enter = 28
 keyboard.ctrl = 29
+keyboard.right_ctrl = 157
 keyboard.backspace = 14
 
 keyboard.shift = 42
@@ -74,6 +75,9 @@ keyboard.up = 200
 keyboard.down = 208
 keyboard.left = 203
 keyboard.right = 205
+
+keyboard.home = 199
+keyboard.pageup = 201
 
 keyboard.numpadminus = 74
 keyboard.numpadplus = 78
