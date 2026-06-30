@@ -76,6 +76,9 @@ keyboard.down = 208
 keyboard.left = 203
 keyboard.right = 205
 
+keyboard.home = 199
+keyboard.pageup = 201
+
 keyboard.numpadminus = 74
 keyboard.numpadplus = 78
 

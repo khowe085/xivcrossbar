@@ -81,6 +81,8 @@ gamepad_state.right_trigger = false
 gamepad_state.right_trigger_doublepress = false
 gamepad_state.left_ctrl = false
 gamepad_state.right_ctrl = false
+gamepad_state.left_paddle = false
+gamepad_state.right_paddle = false
 gamepad_state.active_bar = 0
 local shift_pressed = false
 local ui_dirty = false
@@ -604,6 +606,16 @@ windower.register_event('load',function()
     windower.send_command('unbind ^f11')
     -- right trigger
     windower.send_command('unbind ^f12')
+
+    -- The rear paddles map to bare Home (DIK 199) -> bar 5 and Page Up (DIK 201) -> bar 6.
+    -- FFXI reads Home/Page Up as camera controls via DirectInput, so returning true from the
+    -- keyboard event is not enough on its own. Binding them to a silent no-op addon subcommand
+    -- intercepts them from the game (the keyboard event still fires for bound keys), stopping the
+    -- camera from moving while the paddle logic still runs.
+    -- left paddle
+    windower.send_command('bind home xb noop')
+    -- right paddle
+    windower.send_command('bind pageup xb noop')
 end)
 
 -- ON LOGIN
@@ -617,6 +629,13 @@ windower.register_event('logout', function()
     ui:hide()
     skillchains.logout()
     windower.send_command('lua u xivcrossbar')
+end)
+
+-- ON UNLOAD
+windower.register_event('unload', function()
+    -- Return the rear-paddle keys to the game so Home/Page Up control the camera again.
+    windower.send_command('unbind home')
+    windower.send_command('unbind pageup')
 end)
 
 -- ON COMMAND
@@ -663,6 +682,9 @@ windower.register_event('addon command', function(command, ...)
         remap()
     elseif command == 'regenerate' then
         regenerate_resources()
+    elseif command == 'noop' then
+        -- Silent no-op target for the Home/Page Up (rear paddle) camera-suppression binds.
+        -- Intentionally does nothing and prints nothing.
     elseif command == '?' or command == 'help' then
         display_help_menu()
     end
@@ -731,11 +753,21 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         gamepad_state.minus_button = pressed
     elseif (gamepad.is_plus(dik)) then
         gamepad_state.plus_button = pressed
+    elseif (gamepad.is_left_paddle(dik)) then
+        gamepad_state.left_paddle = pressed
+    elseif (gamepad.is_right_paddle(dik)) then
+        gamepad_state.right_paddle = pressed
     end
 
     -- Derive capturing from all soft-pull modifiers so Steam Input's non-reference-counted
     -- shared Ctrl can't collapse the crossbar while another trigger/modifier is still held.
-    gamepad_state.capturing = gamepad_state.left_ctrl or gamepad_state.right_ctrl or gamepad_state.left_trigger or gamepad_state.right_trigger or gamepad_state.plus_button or gamepad_state.minus_button
+    -- Paddles carry no Ctrl, so pressing/releasing one can never drop a trigger's Ctrl.
+    gamepad_state.capturing = gamepad_state.left_ctrl or gamepad_state.right_ctrl or gamepad_state.left_trigger or gamepad_state.right_trigger or gamepad_state.plus_button or gamepad_state.minus_button or gamepad_state.left_paddle or gamepad_state.right_paddle
+
+    -- A held paddle engages a side directly and resolves to its dedicated bar (5/6) with no
+    -- double-press emulation. Triggers keep their original behavior.
+    local left_engaged = gamepad_state.left_trigger or gamepad_state.left_paddle
+    local right_engaged = gamepad_state.right_trigger or gamepad_state.right_paddle
 
     local only_left_trigger_just_pressed = left_trigger_just_pressed and not gamepad_state.right_trigger
     if (not is_left_doublepress_window_open and only_left_trigger_just_pressed) then
@@ -812,16 +844,38 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         return true
     end
 
-    if (gamepad_state.capturing and gamepad_state.left_trigger and not gamepad_state.right_trigger) then
-        if (gamepad_state.left_trigger_doublepress and theme_options.hotbar_number >= 5) then
+    local left_extra = gamepad_state.left_trigger_doublepress or gamepad_state.left_paddle
+    local right_extra = gamepad_state.right_trigger_doublepress or gamepad_state.right_paddle
+
+    -- Dual-trigger (bars 3/4) is driven by the TWO TRIGGERS only; a paddle never participates.
+    -- A held paddle always resolves to its dedicated single-side bar (5/6), even if the opposite
+    -- trigger is also held, so a paddle+trigger combo can't hijack bars 3/4.
+    if (gamepad_state.capturing and gamepad_state.left_paddle and not gamepad_state.right_paddle and not (gamepad_state.left_trigger and gamepad_state.right_trigger)) then
+        if (theme_options.hotbar_number >= 5) then
             change_active_hotbar(5)
             gamepad_state.active_bar = 5
         else
             change_active_hotbar(1)
             gamepad_state.active_bar = 1
         end
-    elseif (gamepad_state.capturing and gamepad_state.right_trigger and not gamepad_state.left_trigger) then
-        if (gamepad_state.right_trigger_doublepress and theme_options.hotbar_number >= 6) then
+    elseif (gamepad_state.capturing and gamepad_state.right_paddle and not gamepad_state.left_paddle and not (gamepad_state.left_trigger and gamepad_state.right_trigger)) then
+        if (theme_options.hotbar_number >= 6) then
+            change_active_hotbar(6)
+            gamepad_state.active_bar = 6
+        else
+            change_active_hotbar(2)
+            gamepad_state.active_bar = 2
+        end
+    elseif (gamepad_state.capturing and left_engaged and not right_engaged) then
+        if (left_extra and theme_options.hotbar_number >= 5) then
+            change_active_hotbar(5)
+            gamepad_state.active_bar = 5
+        else
+            change_active_hotbar(1)
+            gamepad_state.active_bar = 1
+        end
+    elseif (gamepad_state.capturing and right_engaged and not left_engaged) then
+        if (right_extra and theme_options.hotbar_number >= 6) then
             change_active_hotbar(6)
             gamepad_state.active_bar = 6
         else
@@ -875,9 +929,9 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
             return true
         end
 
-        if (gamepad.is_left_trigger(dik)) then
+        if (gamepad.is_left_trigger(dik) or gamepad.is_left_paddle(dik)) then
             gamepad_mapper:trigger_left(pressed)
-        elseif (gamepad.is_right_trigger(dik)) then
+        elseif (gamepad.is_right_trigger(dik) or gamepad.is_right_paddle(dik)) then
             gamepad_mapper:trigger_right(pressed)
         end
     elseif (not action_binder.is_hidden) then
@@ -912,6 +966,12 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
                 action_binder:trigger_left(pressed)
             elseif (gamepad.is_right_trigger(dik)) then
                 action_binder:trigger_right(pressed)
+            elseif (gamepad.is_left_paddle(dik)) then
+                -- left paddle binds bar 5: left side held, forced doublepress
+                action_binder:trigger_left(pressed, true)
+            elseif (gamepad.is_right_paddle(dik)) then
+                -- right paddle binds bar 6: right side held, forced doublepress
+                action_binder:trigger_right(pressed, true)
             end
         end
     end
@@ -941,7 +1001,7 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         end
     end
 
-    local any_trigger_down = gamepad_state.left_trigger or gamepad_state.right_trigger
+    local any_trigger_down = left_engaged or right_engaged
     if (gamepad_state.capturing and any_trigger_down and gamepad.is_face_button_or_dpad(dik)) then
         if (pressed) then
             if (gamepad.is_dpad_left(dik)) then
@@ -997,6 +1057,12 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
                 env_chooser:hide_player_environments()
             end
         end
+    end
+
+    -- Consume the dedicated paddle keys so they never leak through the message-queue path.
+    -- (The game's camera is suppressed separately by binding Home/PageUp to a no-op.)
+    if (gamepad.is_left_paddle(dik) or gamepad.is_right_paddle(dik)) then
+        return true
     end
 end)
 

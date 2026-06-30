@@ -149,3 +149,14 @@ When proxying gamepad inputs through Steam Input (rather than AHK), map the trig
 - Minus button → Ctrl + F9 (gamepad binding utility)
 
 The bundled AHK script only ever emits a generic Ctrl (= Left Ctrl), so it continues to work unchanged; the separate Right Ctrl is only needed for Steam Input.
+
+### Rear paddles → crossbars 5/6
+
+The rear paddles get their own dedicated keys that map directly to crossbars 5/6, with **no Ctrl and no double-press emulation**:
+
+- Left rear paddle (L4) → **Home** (DIK 199) → crossbar 5
+- Right rear paddle (R4) → **Page Up** (DIK 201) → crossbar 6
+
+Hold a paddle and press a face button or dpad direction to fire its crossbar-5/6 action, exactly like holding a trigger. Because the paddle keys carry no Ctrl, pressing or releasing a paddle while a trigger is held can never drop the trigger's shared Ctrl, so the crossbar no longer collapses in that case. The trigger double-press route to crossbars 5/6 still works, so this is purely additive.
+
+Map the paddles in Steam Input to a plain Home / Page Up key press (single tap, no modifier). Because FFXI reads Home and Page Up as camera controls through DirectInput, the addon **binds Home and Page Up to a silent no-op** while it is loaded so the paddles do not move the camera; the keys are released back to the game on unload (`//lua unload xivcrossbar`).

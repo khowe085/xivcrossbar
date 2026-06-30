@@ -28,6 +28,8 @@ local minus = 67
 local plus = 68
 local left_trigger = 87
 local right_trigger = 88
+local left_paddle = 199
+local right_paddle = 201
 
 function gamepad.is_face_button_or_dpad(dik)
   return face_buttons[dik] ~= nil or dpad_button[dik] ~= nil
@@ -79,6 +81,14 @@ end
 
 function gamepad.is_right_trigger(dik)
   return dik == right_trigger
+end
+
+function gamepad.is_left_paddle(dik)
+  return dik == left_paddle
+end
+
+function gamepad.is_right_paddle(dik)
+  return dik == right_paddle
 end
 
 return gamepad
