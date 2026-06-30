@@ -975,7 +975,7 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         end
     end
 
-    if (gamepad_state.capturing and plus_nav_mode and pressed) then
+    if (gamepad_state.plus_button and plus_nav_mode and pressed) then
         if (gamepad.is_dpad_down(dik)) then
             windower.send_command('xb next')
             return true
@@ -1012,7 +1012,7 @@ windower.register_event('keyboard', function(dik, pressed, flags, blocked)
         end
     end
 
-    if (gamepad_state.capturing and gamepad.is_plus(dik)) then
+    if (gamepad.is_plus(dik) and (gamepad_state.capturing or not pressed)) then
         if (pressed) then
             plus_hold_pending = true
             plus_hold_gen = plus_hold_gen + 1
